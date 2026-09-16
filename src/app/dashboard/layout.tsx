@@ -2,7 +2,6 @@
 
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
 import { LayoutDashboard, Users, FileText, ClipboardList, LogOut, Wrench, Menu } from "lucide-react";
@@ -23,7 +22,6 @@ export default function DashboardLayout({
   }, [status, router]);
 
   if (status === "loading") {
-    return <div className="flex h-screen items-center justify-center">Loading...</div>;
     return (
       <div className="flex h-screen items-center justify-center bg-slate-50">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
@@ -43,12 +41,6 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <aside className="w-64 bg-white shadow-md flex flex-col">
-        <div className="p-4 border-b">
-          <h2 className="text-xl font-bold text-gray-800">HICON Admin</h2>
-          <p className="text-sm text-gray-500">{session.user.role}</p>
     <div className="flex h-screen bg-slate-50 text-slate-900 font-sans">
       {/* Sidebar Desktop */}
       <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20">
@@ -58,16 +50,6 @@ export default function DashboardLayout({
             <span className="text-xl font-bold tracking-wide">HICON</span>
           </div>
         </div>
-        <nav className="flex-1 p-4 space-y-2">
-          <Link href="/dashboard" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">
-            Dashboard Overview
-          </Link>
-          
-          {(session.user.role === "MASTER" || session.user.role === "ADMIN") && (
-            <Link href="/dashboard/users/new" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">
-              Add New User
-            </Link>
-          )}
         
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-3">
@@ -81,13 +63,6 @@ export default function DashboardLayout({
           </div>
         </div>
 
-          <Link href="/dashboard/installations" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">
-            Installations
-          </Link>
-          
-          <Link href="/dashboard/complaints" className="block px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md">
-            Complaints
-          </Link>
         <nav className="flex-1 py-4 px-3 space-y-1 overflow-y-auto">
           {navItems.filter(item => item.show).map((item) => {
             const isActive = pathname === item.href;
@@ -108,27 +83,21 @@ export default function DashboardLayout({
             );
           })}
         </nav>
-        <div className="p-4 border-t">
         
         <div className="p-4 border-t border-slate-800">
           <button
             onClick={() => signOut({ callbackUrl: "/login" })}
-            className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-50 rounded-md"
             className="flex items-center gap-3 w-full px-3 py-2.5 text-slate-400 hover:text-red-400 hover:bg-slate-800 rounded-lg transition-colors font-medium"
           >
-            Logout
             <LogOut className="w-5 h-5" />
             Sign Out
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto p-8">
-        {children}
-      </main>
+      {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Header Mobile (Optional but good for responsiveness) */}
+        {/* Header Mobile */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center px-6 lg:hidden shadow-sm">
            <button className="text-slate-500 hover:text-slate-700">
              <Menu className="w-6 h-6" />
@@ -146,4 +115,3 @@ export default function DashboardLayout({
     </div>
   );
 }
-
