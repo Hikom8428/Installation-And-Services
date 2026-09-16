@@ -17,35 +17,35 @@ export async function PATCH(
     const body = await req.json();
     const { assignedDoerId, status } = body;
 
-    const complaint = await prisma.complaint.findUnique({ where: { id } });
-    if (!complaint) {
-      return NextResponse.json({ message: "Complaint not found" }, { status: 404 });
+    const installation = await prisma.installation.findUnique({ where: { id } });
+    if (!installation) {
+      return NextResponse.json({ message: "Installation not found" }, { status: 404 });
     }
 
     // Manager/Admin can assign doer
     if (assignedDoerId && (session.user.role === "MANAGER" || session.user.role === "ADMIN" || session.user.role === "MASTER")) {
-      const updatedComplaint = await prisma.complaint.update({
+      const updatedInstallation = await prisma.installation.update({
         where: { id },
-        data: { 
+        data: {
           assignedDoerId,
-          status: "ASSIGNED" 
+          status: "ASSIGNED"
         }
       });
-      return NextResponse.json(updatedComplaint, { status: 200 });
+      return NextResponse.json(updatedInstallation, { status: 200 });
     }
 
     // Doer can update status
-    if (status && session.user.role === "DOER" && complaint.assignedDoerId === session.user.id) {
-      const updatedComplaint = await prisma.complaint.update({
+    if (status && session.user.role === "DOER" && installation.assignedDoerId === session.user.id) {
+      const updatedInstallation = await prisma.installation.update({
         where: { id },
         data: { status: status }
       });
-      return NextResponse.json(updatedComplaint, { status: 200 });
+      return NextResponse.json(updatedInstallation, { status: 200 });
     }
 
     return NextResponse.json({ message: "Forbidden or invalid data" }, { status: 403 });
   } catch (error) {
-    console.error("Error updating complaint:", error);
+    console.error("Error updating installation:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
