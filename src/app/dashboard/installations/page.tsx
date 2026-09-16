@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw, Settings } from "lucide-react";
 
 interface Installation {
   id: string;
@@ -11,6 +11,7 @@ interface Installation {
   status: string;
   syncDate: string;
   assignedDoer?: { name: string } | null;
+  data?: Record<string, string> | null;
 }
 
 interface Doer {
@@ -26,9 +27,18 @@ export default function InstallationsDashboard() {
   const [syncing, setSyncing] = useState(false);
   const [message, setMessage] = useState("");
 
+  // Which sheet columns are currently configured to show in the table
+  const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+
   // Modals state
   const [assignModal, setAssignModal] = useState<{ isOpen: boolean; installationId: string }>({ isOpen: false, installationId: "" });
   const [statusModal, setStatusModal] = useState<{ isOpen: boolean; installationId: string }>({ isOpen: false, installationId: "" });
+  const [columnModal, setColumnModal] = useState<{ isOpen: boolean; available: string[]; draft: string[]; loading: boolean }>({
+    isOpen: false,
+    available: [],
+    draft: [],
+    loading: false,
+  });
 
   const fetchInstallations = async () => {
     try {
@@ -52,11 +62,22 @@ export default function InstallationsDashboard() {
     }
   };
 
+  const fetchColumns = async () => {
+    try {
+      const res = await fetch("/api/installations/sync/columns");
+      const data = await res.json();
+      if (res.ok) setSelectedColumns(data.selected || []);
+    } catch (error) {
+      console.error("Failed to fetch columns", error);
+    }
+  };
+
   useEffect(() => {
     if (session) {
       fetchInstallations();
       if (session.user.role !== "DOER") {
         fetchDoers();
+        fetchColumns();
       }
     }
   }, [session]);
@@ -74,6 +95,48 @@ export default function InstallationsDashboard() {
     } finally {
       setSyncing(false);
       setTimeout(() => setMessage(""), 5000);
+    }
+  };
+
+  const openColumnModal = async () => {
+    setColumnModal({ isOpen: true, available: [], draft: [], loading: true });
+    try {
+      const res = await fetch("/api/installations/sync/columns");
+      const data = await res.json();
+      if (res.ok) {
+        setColumnModal({ isOpen: true, available: data.available || [], draft: data.selected || [], loading: false });
+      } else {
+        setMessage(data.message || "Failed to load columns");
+        setColumnModal({ isOpen: false, available: [], draft: [], loading: false });
+      }
+    } catch (error) {
+      console.error("Failed to load columns", error);
+      setColumnModal({ isOpen: false, available: [], draft: [], loading: false });
+    }
+  };
+
+  const toggleDraftColumn = (col: string) => {
+    setColumnModal((prev) => ({
+      ...prev,
+      draft: prev.draft.includes(col) ? prev.draft.filter((c) => c !== col) : [...prev.draft, col],
+    }));
+  };
+
+  const saveColumns = async () => {
+    try {
+      const res = await fetch("/api/installations/sync/columns", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ columns: columnModal.draft }),
+      });
+      if (res.ok) {
+        setSelectedColumns(columnModal.draft);
+        setColumnModal({ isOpen: false, available: [], draft: [], loading: false });
+        setMessage("Column selection saved. Click Sync to refresh data.");
+        setTimeout(() => setMessage(""), 5000);
+      }
+    } catch (error) {
+      console.error("Failed to save columns", error);
     }
   };
 
@@ -122,6 +185,10 @@ export default function InstallationsDashboard() {
 
   if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
+  // Fall back to the fixed Client Name / Product Details columns until a
+  // selection has been fetched (or for Doers, who can't configure columns).
+  const displayColumns = selectedColumns.length > 0 ? selectedColumns : ["Client Name", "Order Details"];
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -129,16 +196,25 @@ export default function InstallationsDashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Installations</h1>
           <p className="text-sm text-slate-500 mt-1">Manage installation tasks fetched from Google Sheets</p>
         </div>
-        
+
         {session?.user.role !== "DOER" && (
-          <button 
-            onClick={handleSync}
-            disabled={syncing}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-70"
-          >
-            <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
-            {syncing ? 'Syncing...' : 'Sync from Google Sheets'}
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openColumnModal}
+              className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors"
+            >
+              <Settings className="w-4 h-4" />
+              Configure Columns
+            </button>
+            <button
+              onClick={handleSync}
+              disabled={syncing}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors disabled:opacity-70"
+            >
+              <RefreshCw className={`w-4 h-4 ${syncing ? 'animate-spin' : ''}`} />
+              {syncing ? 'Syncing...' : 'Sync from Google Sheets'}
+            </button>
+          </div>
         )}
       </div>
 
@@ -153,8 +229,11 @@ export default function InstallationsDashboard() {
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
               <tr>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Client Name</th>
-                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Product Details</th>
+                {displayColumns.map((col) => (
+                  <th key={col} className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
+                    {col}
+                  </th>
+                ))}
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned To</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
@@ -163,19 +242,18 @@ export default function InstallationsDashboard() {
             <tbody className="divide-y divide-slate-200 bg-white">
               {installations.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={displayColumns.length + 3} className="px-6 py-8 text-center text-slate-500">
                     No installations found. Click Sync to pull data from Google Sheets.
                   </td>
                 </tr>
               ) : (
                 installations.map((inst) => (
                   <tr key={inst.id} className="hover:bg-slate-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
-                      {inst.customerName}
-                    </td>
-                    <td className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">
-                      {inst.productDetails || "-"}
-                    </td>
+                    {displayColumns.map((col) => (
+                      <td key={col} className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">
+                        {inst.data?.[col] || (col === "Client Name" ? inst.customerName : "-")}
+                      </td>
+                    ))}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2.5 py-1 inline-flex text-xs font-semibold rounded-full ${getStatusColor(inst.status)}`}>
                         {inst.status}
@@ -250,7 +328,52 @@ export default function InstallationsDashboard() {
           </div>
         </div>
       )}
+
+      {/* Configure Columns Modal */}
+      {columnModal.isOpen && (
+        <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-lg max-h-[80vh] flex flex-col">
+            <h3 className="text-lg font-bold mb-1 text-slate-900">Configure Columns</h3>
+            <p className="text-sm text-slate-500 mb-4">
+              Choose which columns from the Google Sheet should be pulled in and shown in the Installations table.
+            </p>
+
+            {columnModal.loading ? (
+              <div className="py-8 text-center text-slate-500 text-sm">Loading columns from sheet...</div>
+            ) : (
+              <div className="flex-1 overflow-y-auto space-y-1 mb-4 border border-slate-100 rounded-lg p-3">
+                {columnModal.available.map((col) => (
+                  <label key={col} className="flex items-center gap-3 px-2 py-2 rounded-lg hover:bg-slate-50 cursor-pointer text-sm">
+                    <input
+                      type="checkbox"
+                      checked={columnModal.draft.includes(col)}
+                      onChange={() => toggleDraftColumn(col)}
+                      className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-slate-700">{col}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+
+            <div className="flex gap-2">
+              <button
+                onClick={() => setColumnModal({ isOpen: false, available: [], draft: [], loading: false })}
+                className="flex-1 bg-slate-100 text-slate-700 p-2.5 rounded-lg text-sm font-medium hover:bg-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={saveColumns}
+                disabled={columnModal.loading}
+                className="flex-1 bg-blue-600 text-white p-2.5 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60"
+              >
+                Save
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
-

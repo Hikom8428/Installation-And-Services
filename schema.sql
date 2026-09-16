@@ -31,6 +31,7 @@ CREATE TABLE `User` (
 -- CreateTable
 CREATE TABLE `Installation` (
     `id` VARCHAR(191) NOT NULL,
+    `sourceId` VARCHAR(191) NULL,
     `customerName` VARCHAR(191) NOT NULL,
     `customerPhone` VARCHAR(191) NULL,
     `customerAddress` VARCHAR(191) NULL,
@@ -38,6 +39,17 @@ CREATE TABLE `Installation` (
     `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
     `assignedDoerId` VARCHAR(191) NULL,
     `syncDate` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+    `data` JSON NULL,
+
+    UNIQUE INDEX `Installation_sourceId_key`(`sourceId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `SyncConfig` (
+    `id` VARCHAR(191) NOT NULL DEFAULT 'default',
+    `columns` JSON NOT NULL,
     `updatedAt` DATETIME(3) NOT NULL,
 
     PRIMARY KEY (`id`)
