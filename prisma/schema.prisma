@@ -1,0 +1,66 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  MASTER
+  ADMIN
+  MANAGER
+  DOER
+}
+
+enum TaskStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  COMPLETED
+  RESCHEDULED
+}
+
+model User {
+  id        String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String
+  role      Role     @default(DOER)
+  role      String   @default("DOER") // MASTER, ADMIN, MANAGER, DOER
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  installations Installation[] @relation("DoerInstallations")
+  complaints    Complaint[]    @relation("DoerComplaints")
+}
+
+model Installation {
+  id             String     @id @default(uuid())
+  customerName   String
+  customerPhone  String?
+  customerAddress String?
+  productDetails String?
+  status         TaskStatus @default(PENDING)
+  status         String     @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
+  assignedDoerId String?
+  assignedDoer   User?      @relation("DoerInstallations", fields: [assignedDoerId], references: [id])
+  syncDate       DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+}
+
+model Complaint {
+  id               String     @id @default(uuid())
+  customerName     String
+  customerPhone    String
+  issueDescription String
+  status           TaskStatus @default(PENDING)
+  status           String     @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
+  assignedDoerId   String?
+  assignedDoer     User?      @relation("DoerComplaints", fields: [assignedDoerId], references: [id])
+  createdAt        DateTime   @default(now())
+  updatedAt        DateTime   @updatedAt
+}
+
