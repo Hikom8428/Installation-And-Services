@@ -3,24 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
   provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-enum Role {
-  MASTER
-  ADMIN
-  MANAGER
-  DOER
-}
-
-enum TaskStatus {
-  PENDING
-  ASSIGNED
-  IN_PROGRESS
-  COMPLETED
-  RESCHEDULED
 }
 
 model User {
@@ -28,7 +12,6 @@ model User {
   name      String
   email     String   @unique
   password  String
-  role      Role     @default(DOER)
   role      String   @default("DOER") // MASTER, ADMIN, MANAGER, DOER
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -43,7 +26,6 @@ model Installation {
   customerPhone  String?
   customerAddress String?
   productDetails String?
-  status         TaskStatus @default(PENDING)
   status         String     @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
   assignedDoerId String?
   assignedDoer   User?      @relation("DoerInstallations", fields: [assignedDoerId], references: [id])
@@ -56,11 +38,9 @@ model Complaint {
   customerName     String
   customerPhone    String
   issueDescription String
-  status           TaskStatus @default(PENDING)
   status           String     @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
   assignedDoerId   String?
   assignedDoer     User?      @relation("DoerComplaints", fields: [assignedDoerId], references: [id])
   createdAt        DateTime   @default(now())
   updatedAt        DateTime   @updatedAt
 }
-

@@ -32,21 +32,6 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-md p-8 space-y-6 bg-white rounded-xl shadow-md">
-        <h1 className="text-2xl font-bold text-center text-gray-900">
-          HICON Insta & Serv
-        </h1>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Email</label>
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="w-full px-4 py-2 mt-1 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-black"
-              required
-            />
     <div className="min-h-screen flex text-slate-800 font-sans">
       {/* Left side - Branding */}
       <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-blue-700 via-blue-800 to-slate-900 text-white flex-col justify-center px-16 relative overflow-hidden">
@@ -58,15 +43,6 @@ export default function LoginPage() {
             </div>
             <h1 className="text-4xl font-black tracking-tight">HICON</h1>
           </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700">Password</label>
-            <input
-              type="password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              className="w-full px-4 py-2 mt-1 border rounded-md focus:ring-blue-500 focus:border-blue-500 text-black"
-              required
-            />
           <h2 className="text-5xl font-extrabold leading-tight mb-6">
             Installation & <br/> Service Portal
           </h2>
@@ -89,14 +65,6 @@ export default function LoginPage() {
             <h2 className="text-3xl font-bold text-slate-900">Welcome Back</h2>
             <p className="mt-2 text-sm text-slate-500">Please sign in to your account to continue</p>
           </div>
-          {error && <p className="text-sm text-red-600">{error}</p>}
-          <button
-            type="submit"
-            className="w-full px-4 py-2 font-medium text-white bg-blue-600 rounded-md hover:bg-blue-700"
-          >
-            Sign In
-          </button>
-        </form>
 
           <div className="bg-white py-8 px-6 shadow-xl shadow-slate-200/50 rounded-2xl border border-slate-100">
             <form onSubmit={handleSubmit} className="space-y-5">
@@ -117,7 +85,6 @@ export default function LoginPage() {
               <div>
                 <div className="flex justify-between items-center mb-1">
                   <label className="block text-sm font-semibold text-slate-700">Password</label>
-                  <a href="#" className="text-xs font-medium text-blue-600 hover:text-blue-500">Forgot password?</a>
                 </div>
                 <input
                   type="password"
