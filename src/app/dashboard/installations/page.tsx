@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { RefreshCw, Settings } from "lucide-react";
 import TaskProgressModal from "@/components/TaskProgressModal";
+import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal";
 
 interface Installation {
   id: string;
@@ -11,7 +12,7 @@ interface Installation {
   productDetails: string;
   status: string;
   syncDate: string;
-  assignedDoer?: { name: string } | null;
+  assignments: AssignmentInfo[];
   data?: Record<string, string> | null;
 }
 
@@ -151,23 +152,6 @@ export default function InstallationsDashboard() {
     }
   };
 
-  const handleAssign = async (doerId: string) => {
-    if (!doerId) return;
-    try {
-      const res = await fetch(`/api/installations/${assignModal.installationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignedDoerId: doerId }),
-      });
-      if (res.ok) {
-        setAssignModal({ isOpen: false, installationId: "" });
-        fetchInstallations(); // refresh
-      }
-    } catch (error) {
-      console.error("Assign error", error);
-    }
-  };
-
   if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
   // Fall back to the fixed Client Name / Product Details columns until a
@@ -255,7 +239,7 @@ export default function InstallationsDashboard() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                      {inst.assignedDoer?.name || "Unassigned"}
+                      {inst.assignments.length > 0 ? inst.assignments.map((a) => a.doerName).join(", ") : "Unassigned"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {session?.user.role !== "DOER" ? (
@@ -263,7 +247,7 @@ export default function InstallationsDashboard() {
                           <button onClick={() => setAssignModal({ isOpen: true, installationId: inst.id })} className="text-indigo-600 hover:text-indigo-900">
                             Assign Doer
                           </button>
-                          {inst.assignedDoer && (
+                          {inst.assignments.length > 0 && (
                             <button onClick={() => setProgressModal({ isOpen: true, installationId: inst.id })} className="text-blue-600 hover:text-blue-900">
                               View Progress
                             </button>
@@ -286,25 +270,15 @@ export default function InstallationsDashboard() {
 
       {/* Assign Modal */}
       {assignModal.isOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-sm">
-            <h3 className="text-lg font-bold mb-4 text-slate-900">Assign to Doer</h3>
-            <select
-              className="w-full p-2.5 border border-slate-200 rounded-lg mb-4 text-sm"
-              defaultValue=""
-              onChange={(e) => handleAssign(e.target.value)}
-            >
-              <option value="" disabled>Select a Doer...</option>
-              {doers.map(doer => <option key={doer.id} value={doer.id}>{doer.name}</option>)}
-            </select>
-            <button
-              onClick={() => setAssignModal({ isOpen: false, installationId: "" })}
-              className="w-full bg-slate-100 text-slate-700 p-2.5 rounded-lg text-sm font-medium hover:bg-slate-200"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        <AssignDoersModal
+          taskType="INSTALLATION"
+          taskId={assignModal.installationId}
+          isOpen={assignModal.isOpen}
+          onClose={() => setAssignModal({ isOpen: false, installationId: "" })}
+          doers={doers}
+          currentAssignments={installations.find((i) => i.id === assignModal.installationId)?.assignments || []}
+          onUpdated={fetchInstallations}
+        />
       )}
 
       {/* Task Progress Modal (Doer fills steps; Manager/Admin/Master view them) */}

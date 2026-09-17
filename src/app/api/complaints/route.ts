@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getAssignedTaskIds, attachAssignments } from "@/lib/taskAssignments";
 import { randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
@@ -131,26 +132,24 @@ export async function GET(req: Request) {
     }
 
     let complaints;
-    
+
     // If Doer, only fetch their assigned complaints
     if (session.user.role === "DOER") {
+      const taskIds = await getAssignedTaskIds("COMPLAINT", session.user.id);
       complaints = await prisma.complaint.findMany({
-        where: { assignedDoerId: session.user.id },
+        where: { id: { in: taskIds } },
         orderBy: { createdAt: 'desc' }
       });
     } else {
       // Master, Admin, Manager can see all complaints
       complaints = await prisma.complaint.findMany({
         orderBy: { createdAt: 'desc' },
-        include: {
-          assignedDoer: {
-            select: { name: true }
-          }
-        }
       });
     }
 
-    return NextResponse.json(complaints, { status: 200 });
+    const withAssignments = await attachAssignments("COMPLAINT", complaints);
+
+    return NextResponse.json(withAssignments, { status: 200 });
   } catch (error) {
     console.error("Error fetching complaints:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

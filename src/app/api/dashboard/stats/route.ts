@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getAssignedTaskIds } from "@/lib/taskAssignments";
 
 export async function GET() {
   try {
@@ -12,8 +13,12 @@ export async function GET() {
 
     // Doers only see counts for work assigned to them; everyone else sees the org-wide totals.
     const isDoer = session.user.role === "DOER";
-    const installationWhere = isDoer ? { assignedDoerId: session.user.id } : {};
-    const complaintWhere = isDoer ? { assignedDoerId: session.user.id } : {};
+    const installationWhere = isDoer
+      ? { id: { in: await getAssignedTaskIds("INSTALLATION", session.user.id) } }
+      : {};
+    const complaintWhere = isDoer
+      ? { id: { in: await getAssignedTaskIds("COMPLAINT", session.user.id) } }
+      : {};
 
     const [pendingInstallations, activeComplaints, resolvedComplaints, totalDoers] = await Promise.all([
       prisma.installation.count({ where: { ...installationWhere, status: "PENDING" } }),

@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
+import { isTaskAssignedToDoer } from "@/lib/taskAssignments";
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
 const MAX_VIDEO_BYTES = 30 * 1024 * 1024; // 30MB
@@ -76,7 +77,8 @@ export async function GET(req: Request) {
       return NextResponse.json({ message: "Task not found" }, { status: 404 });
     }
 
-    const isAssignedDoer = session.user.role === "DOER" && task.assignedDoerId === session.user.id;
+    const isAssignedDoer =
+      session.user.role === "DOER" && (await isTaskAssignedToDoer(taskType, taskId, session.user.id));
     const isStaff = session.user.role === "MASTER" || session.user.role === "ADMIN" || session.user.role === "MANAGER";
     if (!isAssignedDoer && !isStaff) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
@@ -113,7 +115,7 @@ export async function POST(req: Request) {
     if (!task) {
       return NextResponse.json({ message: "Task not found" }, { status: 404 });
     }
-    if (task.assignedDoerId !== session.user.id) {
+    if (!(await isTaskAssignedToDoer(taskType, taskId, session.user.id))) {
       return NextResponse.json({ message: "This task is not assigned to you" }, { status: 403 });
     }
 

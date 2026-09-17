@@ -16,10 +16,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  installations    Installation[] @relation("DoerInstallations")
-  complaints       Complaint[]    @relation("DoerComplaints")
-  raisedSiteVisits SiteVisit[]    @relation("RaisedSiteVisits")
-  siteVisits       SiteVisit[]    @relation("DoerSiteVisits")
+  raisedSiteVisits SiteVisit[]      @relation("RaisedSiteVisits")
+  taskAssignments  TaskAssignment[] @relation("DoerTaskAssignments")
 }
 
 model Installation {
@@ -30,11 +28,26 @@ model Installation {
   customerAddress String?
   productDetails String?
   status         String     @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
-  assignedDoerId String?
-  assignedDoer   User?      @relation("DoerInstallations", fields: [assignedDoerId], references: [id])
   syncDate       DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
   data           Json?      // raw Google Sheet values for the currently-configured display columns, keyed by column header
+}
+
+// One row per Doer assigned to a task — a task can have multiple Doers.
+// taskType + taskId identify which Installation/Complaint/SiteVisit this is
+// (mirrors TaskStep's polymorphic pattern). fundAmount is the optional cash
+// advance handed to that Doer for that task at assignment time.
+model TaskAssignment {
+  id         String   @id @default(uuid())
+  taskType   String   // "INSTALLATION" | "COMPLAINT" | "SITE_VISIT"
+  taskId     String
+  doerId     String
+  doer       User     @relation("DoerTaskAssignments", fields: [doerId], references: [id])
+  fundAmount Float?
+  fundNotes  String?
+  createdAt  DateTime @default(now())
+
+  @@unique([taskType, taskId, doerId])
 }
 
 // Singleton row (id = "default") storing which Google Sheet columns the
@@ -102,8 +115,6 @@ model SiteVisit {
   attendantPhone String?
   visitFor       String    // DOOR | PANEL | DOOR_PANEL
   status         String    @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
-  assignedDoerId String?
-  assignedDoer   User?     @relation("DoerSiteVisits", fields: [assignedDoerId], references: [id])
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
@@ -124,8 +135,6 @@ model Complaint {
   attachmentUrl      String?    // uploaded invoice/bill document
   mediaUrls          Json?      // uploaded problem photos/videos (array of URLs)
   status             String     @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
-  assignedDoerId     String?
-  assignedDoer       User?      @relation("DoerComplaints", fields: [assignedDoerId], references: [id])
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 }

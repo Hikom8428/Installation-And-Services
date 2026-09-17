@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { getAssignedTaskIds, attachAssignments } from "@/lib/taskAssignments";
 
 const VALID_VISIT_FOR = ["DOOR", "PANEL", "DOOR_PANEL"];
 
@@ -56,11 +57,11 @@ export async function GET() {
 
     let siteVisits;
     if (session.user.role === "DOER") {
+      const taskIds = await getAssignedTaskIds("SITE_VISIT", session.user.id);
       siteVisits = await prisma.siteVisit.findMany({
-        where: { assignedDoerId: session.user.id },
+        where: { id: { in: taskIds } },
         orderBy: { createdAt: "desc" },
         include: {
-          assignedDoer: { select: { name: true } },
           raisedBy: { select: { name: true } },
         },
       });
@@ -68,13 +69,14 @@ export async function GET() {
       siteVisits = await prisma.siteVisit.findMany({
         orderBy: { createdAt: "desc" },
         include: {
-          assignedDoer: { select: { name: true } },
           raisedBy: { select: { name: true } },
         },
       });
     }
 
-    return NextResponse.json(siteVisits, { status: 200 });
+    const withAssignments = await attachAssignments("SITE_VISIT", siteVisits);
+
+    return NextResponse.json(withAssignments, { status: 200 });
   } catch (error) {
     console.error("Error fetching site visits:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

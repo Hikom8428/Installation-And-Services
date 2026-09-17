@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import TaskProgressModal from "@/components/TaskProgressModal";
+import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal";
 
 const LocationPicker = dynamic(() => import("@/components/LocationPicker"), {
   ssr: false,
@@ -22,7 +23,7 @@ interface SiteVisit {
   attendantPhone?: string | null;
   visitFor: string;
   status: string;
-  assignedDoer?: { name: string } | null;
+  assignments: AssignmentInfo[];
   raisedBy?: { name: string } | null;
 }
 
@@ -129,23 +130,6 @@ export default function SiteVisitsDashboard() {
     }
   };
 
-  const handleAssign = async (doerId: string) => {
-    if (!doerId) return;
-    try {
-      const res = await fetch(`/api/site-visits/${assignModal.visitId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignedDoerId: doerId }),
-      });
-      if (res.ok) {
-        setAssignModal({ isOpen: false, visitId: "" });
-        fetchVisits();
-      }
-    } catch (error) {
-      console.error("Assign error", error);
-    }
-  };
-
   if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
   return (
@@ -222,7 +206,7 @@ export default function SiteVisitsDashboard() {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                      {v.assignedDoer?.name || "Unassigned"}
+                      {v.assignments.length > 0 ? v.assignments.map((a) => a.doerName).join(", ") : "Unassigned"}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {isStaff ? (
@@ -230,7 +214,7 @@ export default function SiteVisitsDashboard() {
                           <button onClick={() => setAssignModal({ isOpen: true, visitId: v.id })} className="text-indigo-600 hover:text-indigo-900">
                             Assign Doer
                           </button>
-                          {v.assignedDoer && (
+                          {v.assignments.length > 0 && (
                             <button onClick={() => setProgressModal({ isOpen: true, visitId: v.id })} className="text-blue-600 hover:text-blue-900">
                               View Progress
                             </button>
@@ -319,25 +303,15 @@ export default function SiteVisitsDashboard() {
 
       {/* Assign Modal */}
       {assignModal.isOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
-          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-sm">
-            <h3 className="text-lg font-bold mb-4 text-slate-900">Assign to Doer</h3>
-            <select
-              className="w-full p-2.5 border border-slate-200 rounded-lg mb-4 text-sm"
-              defaultValue=""
-              onChange={(e) => handleAssign(e.target.value)}
-            >
-              <option value="" disabled>Select a Doer...</option>
-              {doers.map((doer) => <option key={doer.id} value={doer.id}>{doer.name}</option>)}
-            </select>
-            <button
-              onClick={() => setAssignModal({ isOpen: false, visitId: "" })}
-              className="w-full bg-slate-100 text-slate-700 p-2.5 rounded-lg text-sm font-medium hover:bg-slate-200"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+        <AssignDoersModal
+          taskType="SITE_VISIT"
+          taskId={assignModal.visitId}
+          isOpen={assignModal.isOpen}
+          onClose={() => setAssignModal({ isOpen: false, visitId: "" })}
+          doers={doers}
+          currentAssignments={visits.find((v) => v.id === assignModal.visitId)?.assignments || []}
+          onUpdated={fetchVisits}
+        />
       )}
 
       {/* Task Progress Modal (Doer fills steps; Manager/Admin/Master view them) */}

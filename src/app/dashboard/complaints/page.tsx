@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import TaskProgressModal from "@/components/TaskProgressModal";
+import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal";
 
 interface Complaint {
   id: string;
@@ -21,7 +22,7 @@ interface Complaint {
   mediaUrls?: string[] | null;
   status: string;
   createdAt: string;
-  assignedDoer?: { name: string } | null;
+  assignments: AssignmentInfo[];
 }
 
 interface Doer {
@@ -69,22 +70,6 @@ export default function ComplaintsDashboard() {
       }
     }
   }, [session]);
-
-  const handleAssign = async (doerId: string) => {
-    try {
-      const res = await fetch(`/api/complaints/${assignModal.complaintId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ assignedDoerId: doerId }),
-      });
-      if (res.ok) {
-        setAssignModal({ isOpen: false, complaintId: "" });
-        fetchComplaints(); // refresh
-      }
-    } catch (error) {
-      console.error("Assign error", error);
-    }
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -188,13 +173,13 @@ export default function ComplaintsDashboard() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {complaint.assignedDoer?.name || "Unassigned"}
+                    {complaint.assignments.length > 0 ? complaint.assignments.map((a) => a.doerName).join(", ") : "Unassigned"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     {session?.user.role !== "DOER" ? (
                       <div className="flex items-center gap-3">
                         <button onClick={() => setAssignModal({ isOpen: true, complaintId: complaint.id })} className="text-indigo-600 hover:text-indigo-900">Assign Doer</button>
-                        {complaint.assignedDoer && (
+                        {complaint.assignments.length > 0 && (
                           <button onClick={() => setProgressModal({ isOpen: true, complaintId: complaint.id })} className="text-blue-600 hover:text-blue-900">View Progress</button>
                         )}
                       </div>
@@ -211,16 +196,15 @@ export default function ComplaintsDashboard() {
 
       {/* Assign Modal */}
       {assignModal.isOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center p-4">
-          <div className="bg-white p-6 rounded-md shadow-lg w-full max-w-sm">
-            <h3 className="text-lg font-bold mb-4">Assign to Doer</h3>
-            <select className="w-full p-2 border rounded mb-4" onChange={(e) => handleAssign(e.target.value)}>
-              <option value="">Select a Doer...</option>
-              {doers.map(doer => <option key={doer.id} value={doer.id}>{doer.name}</option>)}
-            </select>
-            <button onClick={() => setAssignModal({ isOpen: false, complaintId: "" })} className="w-full bg-gray-200 text-gray-800 p-2 rounded">Cancel</button>
-          </div>
-        </div>
+        <AssignDoersModal
+          taskType="COMPLAINT"
+          taskId={assignModal.complaintId}
+          isOpen={assignModal.isOpen}
+          onClose={() => setAssignModal({ isOpen: false, complaintId: "" })}
+          doers={doers}
+          currentAssignments={complaints.find((c) => c.id === assignModal.complaintId)?.assignments || []}
+          onUpdated={fetchComplaints}
+        />
       )}
 
       {/* Task Progress Modal (Doer fills steps; Manager/Admin/Master view them) */}

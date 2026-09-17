@@ -2,11 +2,15 @@
 -- Generated from prisma/schema.prisma via:
 --   npx prisma migrate diff --from-empty --to-schema-datamodel prisma/schema.prisma --script
 --
--- HOW TO USE:
+-- HOW TO USE (fresh database only):
 -- 1. Open phpMyAdmin on Hostinger, select your app's MySQL database.
 -- 2. Go to the "SQL" tab, paste this whole file, and click "Go".
--- 3. This creates the 3 tables (User, Installation, Complaint) and inserts
---    one Master Admin login so you can sign in immediately after deploy.
+-- 3. This creates all tables and inserts one Master Admin login so you can
+--    sign in immediately after deploy.
+--
+-- If you already have data in these tables, do NOT run this file — use the
+-- incremental ALTER SQL provided alongside each feature commit instead, or
+-- you will lose data / hit "table already exists" errors.
 --
 -- Master Admin login (created below):
 --   email:    mis@hicon.co.in
@@ -37,12 +41,25 @@ CREATE TABLE `Installation` (
     `customerAddress` VARCHAR(191) NULL,
     `productDetails` VARCHAR(191) NULL,
     `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
-    `assignedDoerId` VARCHAR(191) NULL,
     `syncDate` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
     `data` JSON NULL,
 
     UNIQUE INDEX `Installation_sourceId_key`(`sourceId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `TaskAssignment` (
+    `id` VARCHAR(191) NOT NULL,
+    `taskType` VARCHAR(191) NOT NULL,
+    `taskId` VARCHAR(191) NOT NULL,
+    `doerId` VARCHAR(191) NOT NULL,
+    `fundAmount` DOUBLE NULL,
+    `fundNotes` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+
+    UNIQUE INDEX `TaskAssignment_taskType_taskId_doerId_key`(`taskType`, `taskId`, `doerId`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -93,7 +110,6 @@ CREATE TABLE `SiteVisit` (
     `attendantPhone` VARCHAR(191) NULL,
     `visitFor` VARCHAR(191) NOT NULL,
     `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
-    `assignedDoerId` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -118,7 +134,6 @@ CREATE TABLE `Complaint` (
     `attachmentUrl` VARCHAR(191) NULL,
     `mediaUrls` JSON NULL,
     `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
-    `assignedDoerId` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -126,16 +141,10 @@ CREATE TABLE `Complaint` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `Installation` ADD CONSTRAINT `Installation_assignedDoerId_fkey` FOREIGN KEY (`assignedDoerId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `Complaint` ADD CONSTRAINT `Complaint_assignedDoerId_fkey` FOREIGN KEY (`assignedDoerId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+ALTER TABLE `TaskAssignment` ADD CONSTRAINT `TaskAssignment_doerId_fkey` FOREIGN KEY (`doerId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `SiteVisit` ADD CONSTRAINT `SiteVisit_raisedById_fkey` FOREIGN KEY (`raisedById`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
-
--- AddForeignKey
-ALTER TABLE `SiteVisit` ADD CONSTRAINT `SiteVisit_assignedDoerId_fkey` FOREIGN KEY (`assignedDoerId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- Seed: Master Admin user (password: Manoj@123 — change after first login)
 INSERT INTO `User` (`id`, `name`, `email`, `password`, `role`, `createdAt`, `updatedAt`)
