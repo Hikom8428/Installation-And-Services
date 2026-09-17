@@ -60,6 +60,14 @@ export default function ComplaintFormPage() {
       setStatus({ type: "error", message: "Please provide either Job No or Door Serial No." });
       return;
     }
+    if (photos.length < 1) {
+      setStatus({ type: "error", message: "Please upload at least 1 problem photo." });
+      return;
+    }
+    if (videos.length < 1) {
+      setStatus({ type: "error", message: "Please upload at least 1 problem video." });
+      return;
+    }
 
     setLoading(true);
 
@@ -123,7 +131,7 @@ export default function ComplaintFormPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Job No <span className="text-gray-400 font-normal">(Job No ya Door Serial No, kam se kam ek zaroori hai)</span>
+              Job No <span className="text-gray-400 font-normal">(either Job No or Door Serial No is required)</span>
             </label>
             <div className="mt-1 flex items-stretch border border-gray-300 rounded-md shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
               <span className="inline-flex items-center px-3 bg-gray-100 text-gray-600 font-medium text-sm select-none">
@@ -153,7 +161,7 @@ export default function ComplaintFormPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Customer Name (Grahak ka Naam)</label>
+            <label className="block text-sm font-medium text-gray-700">Customer Name</label>
             <input
               type="text"
               required
@@ -164,7 +172,7 @@ export default function ComplaintFormPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Phone Number (Mobile Number)</label>
+            <label className="block text-sm font-medium text-gray-700">Mobile Number</label>
             <input
               type="tel"
               required
@@ -209,11 +217,10 @@ export default function ComplaintFormPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Site Attendant Name <span className="text-gray-400 font-normal">(Optional)</span>
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Site Attendant Name</label>
             <input
               type="text"
+              required
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               value={formData.attendantName}
               onChange={(e) => setFormData({ ...formData, attendantName: e.target.value })}
@@ -221,11 +228,10 @@ export default function ComplaintFormPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">
-              Site Attendant Mobile No <span className="text-gray-400 font-normal">(Optional)</span>
-            </label>
+            <label className="block text-sm font-medium text-gray-700">Site Attendant Mobile No</label>
             <input
               type="tel"
+              required
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               value={formData.attendantPhone}
               onChange={(e) => setFormData({ ...formData, attendantPhone: e.target.value })}
@@ -233,7 +239,7 @@ export default function ComplaintFormPage() {
           </div>
 
           <div>
-            <label className="block text-sm font-medium text-gray-700">Issue Description (Samasya batayein)</label>
+            <label className="block text-sm font-medium text-gray-700">Issue Description</label>
             <textarea
               required
               rows={4}
@@ -245,12 +251,13 @@ export default function ComplaintFormPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Problem Photos <span className="text-gray-400 font-normal">(Optional, up to {MAX_PHOTOS})</span>
+              Problem Photos <span className="text-gray-400 font-normal">(minimum 1, up to {MAX_PHOTOS})</span>
             </label>
             <input
               type="file"
               accept="image/*"
               multiple
+              required
               className="mt-1 block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               onChange={(e) => handlePhotosChange(e.target.files)}
             />
@@ -259,12 +266,13 @@ export default function ComplaintFormPage() {
 
           <div>
             <label className="block text-sm font-medium text-gray-700">
-              Problem Videos <span className="text-gray-400 font-normal">(Optional, up to {MAX_VIDEOS}, max 100MB each)</span>
+              Problem Videos <span className="text-gray-400 font-normal">(minimum 1, up to {MAX_VIDEOS}, max 100MB each)</span>
             </label>
             <input
               type="file"
               accept="video/*"
               multiple
+              required
               className="mt-1 block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
               onChange={(e) => handleVideosChange(e.target.files)}
             />

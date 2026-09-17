@@ -52,6 +52,9 @@ export async function POST(req: Request) {
     if (!customerName || !customerPhone || !issueDescription) {
       return NextResponse.json({ message: "Customer Name, Mobile Number, and Issue Description are required" }, { status: 400 });
     }
+    if (!attendantName || !attendantPhone) {
+      return NextResponse.json({ message: "Site Attendant Name and Mobile No are required" }, { status: 400 });
+    }
 
     let attachmentUrl: string | null = null;
     if (attachment instanceof File && attachment.size > 0) {
@@ -64,6 +67,12 @@ export async function POST(req: Request) {
     const photos = formData.getAll("photos").filter((f): f is File => f instanceof File && f.size > 0);
     const videos = formData.getAll("videos").filter((f): f is File => f instanceof File && f.size > 0);
 
+    if (photos.length < 1) {
+      return NextResponse.json({ message: "Please upload at least 1 problem photo" }, { status: 400 });
+    }
+    if (videos.length < 1) {
+      return NextResponse.json({ message: "Please upload at least 1 problem video" }, { status: 400 });
+    }
     if (photos.length > MAX_PHOTOS) {
       return NextResponse.json({ message: `You can upload at most ${MAX_PHOTOS} photos` }, { status: 400 });
     }
