@@ -16,8 +16,10 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  installations Installation[] @relation("DoerInstallations")
-  complaints    Complaint[]    @relation("DoerComplaints")
+  installations    Installation[] @relation("DoerInstallations")
+  complaints       Complaint[]    @relation("DoerComplaints")
+  raisedSiteVisits SiteVisit[]    @relation("RaisedSiteVisits")
+  siteVisits       SiteVisit[]    @relation("DoerSiteVisits")
 }
 
 model Installation {
@@ -43,18 +45,22 @@ model SyncConfig {
   updatedAt DateTime @updatedAt
 }
 
-// Doer's 3-step field completion flow, shared by Installation and Complaint
-// tasks (taskType + taskId identify which one). One row per task.
+// Doer's field completion flow, shared by Installation, Complaint, and
+// SiteVisit tasks (taskType + taskId identify which one). One row per task.
+// Installation/Complaint use all 3 steps; SiteVisit only uses steps 1-2
+// (see src/app/api/task-steps/route.ts for the per-taskType rules).
 //   Step 1: site photo + video, with lat/long captured automatically from
 //           the device at upload time — moves the task to IN_PROGRESS.
-//   Step 2: work-complete evidence upload.
+//   Step 2: work-complete evidence upload (Installation/Complaint), or
+//           visit notes + site chart/calculation upload (SiteVisit, which
+//           also completes the task at this step).
 //   Step 3: expense amount/notes + uploaded bills — moves the task to
-//           COMPLETED.
+//           COMPLETED. (Installation/Complaint only.)
 // Master/Admin/Manager use the Step 1 lat/long to confirm the Doer was
 // actually at the site.
 model TaskStep {
   id            String    @id @default(uuid())
-  taskType      String    // "INSTALLATION" | "COMPLAINT"
+  taskType      String    // "INSTALLATION" | "COMPLAINT" | "SITE_VISIT"
   taskId        String
 
   sitePhotoUrl  String?
@@ -64,6 +70,8 @@ model TaskStep {
   step1At       DateTime?
 
   evidenceUrl   String?
+  notes         String?   @db.Text // SiteVisit step 2: written visit details
+  chartUrl      String?             // SiteVisit step 2: uploaded site chart/calculation
   step2At       DateTime?
 
   expenseAmount Float?
@@ -75,6 +83,29 @@ model TaskStep {
   updatedAt     DateTime  @updatedAt
 
   @@unique([taskType, taskId])
+}
+
+// Raised internally by Manager/Admin/Master (via the dashboard's Site
+// Visits tab, not the public complaint form) to schedule a Doer to visit
+// a site and inspect it. serialNo auto-increments; display it as
+// "SV-0001" etc. by zero-padding.
+model SiteVisit {
+  id             String    @id @default(uuid())
+  serialNo       Int       @unique @default(autoincrement())
+  raisedById     String?
+  raisedBy       User?     @relation("RaisedSiteVisits", fields: [raisedById], references: [id])
+  customerName   String
+  siteAddress    String?
+  siteLatitude   Float?    // picked on the map when raising the visit
+  siteLongitude  Float?
+  attendantName  String?
+  attendantPhone String?
+  visitFor       String    // DOOR | PANEL | DOOR_PANEL
+  status         String    @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
+  assignedDoerId String?
+  assignedDoer   User?     @relation("DoerSiteVisits", fields: [assignedDoerId], references: [id])
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
 }
 
 model Complaint {

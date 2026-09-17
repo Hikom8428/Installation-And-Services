@@ -4,7 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect } from "react";
-import { LayoutDashboard, Users, FileText, ClipboardList, LogOut, Wrench, Menu } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardList, LogOut, Wrench, Menu, MapPin } from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -37,6 +37,7 @@ export default function DashboardLayout({
     { name: "Overview", href: "/dashboard", icon: LayoutDashboard, show: true },
     { name: "Installations", href: "/dashboard/installations", icon: FileText, show: true },
     { name: "Complaints", href: "/dashboard/complaints", icon: ClipboardList, show: true },
+    { name: "Site Visits", href: "/dashboard/site-visits", icon: MapPin, show: true },
     { name: "Manage Users", href: "/dashboard/users/new", icon: Users, show: session.user.role === "MASTER" || session.user.role === "ADMIN" },
   ];
 

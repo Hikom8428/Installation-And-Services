@@ -9,11 +9,20 @@ import path from "path";
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
 const MAX_VIDEO_BYTES = 30 * 1024 * 1024; // 30MB
 
-type TaskType = "INSTALLATION" | "COMPLAINT";
+type TaskType = "INSTALLATION" | "COMPLAINT" | "SITE_VISIT";
+
+// SiteVisit only has a 2-step flow (site photo/video+location, then visit
+// notes + chart) — it completes at step 2 instead of step 3.
+function totalStepsFor(taskType: TaskType) {
+  return taskType === "SITE_VISIT" ? 2 : 3;
+}
 
 async function getTask(taskType: TaskType, taskId: string) {
   if (taskType === "INSTALLATION") {
     return prisma.installation.findUnique({ where: { id: taskId } });
+  }
+  if (taskType === "SITE_VISIT") {
+    return prisma.siteVisit.findUnique({ where: { id: taskId } });
   }
   return prisma.complaint.findUnique({ where: { id: taskId } });
 }
@@ -21,6 +30,8 @@ async function getTask(taskType: TaskType, taskId: string) {
 async function setTaskStatus(taskType: TaskType, taskId: string, status: string) {
   if (taskType === "INSTALLATION") {
     await prisma.installation.update({ where: { id: taskId }, data: { status } });
+  } else if (taskType === "SITE_VISIT") {
+    await prisma.siteVisit.update({ where: { id: taskId }, data: { status } });
   } else {
     await prisma.complaint.update({ where: { id: taskId }, data: { status } });
   }
@@ -40,7 +51,7 @@ async function saveUploadedFile(file: File, maxBytes: number): Promise<string> {
 }
 
 function isValidTaskType(value: string | null): value is TaskType {
-  return value === "INSTALLATION" || value === "COMPLAINT";
+  return value === "INSTALLATION" || value === "COMPLAINT" || value === "SITE_VISIT";
 }
 
 // GET /api/task-steps?taskType=INSTALLATION&taskId=xxx
@@ -106,6 +117,11 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "This task is not assigned to you" }, { status: 403 });
     }
 
+    const maxStep = totalStepsFor(taskType);
+    if (Number(step) > maxStep) {
+      return NextResponse.json({ message: `This task only has ${maxStep} steps` }, { status: 400 });
+    }
+
     const existing = await prisma.taskStep.findUnique({ where: { taskType_taskId: { taskType, taskId } } });
 
     if (step === "1") {
@@ -140,16 +156,37 @@ export async function POST(req: Request) {
       if (!existing?.step1At) {
         return NextResponse.json({ message: "Complete Step 1 first" }, { status: 400 });
       }
-      const evidence = formData.get("evidence");
-      if (!(evidence instanceof File) || evidence.size === 0) {
-        return NextResponse.json({ message: "Work-complete evidence file is required" }, { status: 400 });
-      }
-      const evidenceUrl = await saveUploadedFile(evidence, MAX_VIDEO_BYTES);
 
-      await prisma.taskStep.update({
-        where: { taskType_taskId: { taskType, taskId } },
-        data: { evidenceUrl, step2At: new Date() },
-      });
+      if (taskType === "SITE_VISIT") {
+        const notes = ((formData.get("notes") as string) || "").trim();
+        const chart = formData.get("chart");
+        if (!notes) {
+          return NextResponse.json({ message: "Site visit details are required" }, { status: 400 });
+        }
+        if (!(chart instanceof File) || chart.size === 0) {
+          return NextResponse.json({ message: "Site chart/calculation file is required" }, { status: 400 });
+        }
+        const chartUrl = await saveUploadedFile(chart, MAX_IMAGE_BYTES);
+
+        await prisma.taskStep.update({
+          where: { taskType_taskId: { taskType, taskId } },
+          data: { notes, chartUrl, step2At: new Date() },
+        });
+
+        // SiteVisit's flow ends at step 2.
+        await setTaskStatus(taskType, taskId, "COMPLETED");
+      } else {
+        const evidence = formData.get("evidence");
+        if (!(evidence instanceof File) || evidence.size === 0) {
+          return NextResponse.json({ message: "Work-complete evidence file is required" }, { status: 400 });
+        }
+        const evidenceUrl = await saveUploadedFile(evidence, MAX_VIDEO_BYTES);
+
+        await prisma.taskStep.update({
+          where: { taskType_taskId: { taskType, taskId } },
+          data: { evidenceUrl, step2At: new Date() },
+        });
+      }
     } else {
       // step === "3"
       if (!existing?.step2At) {

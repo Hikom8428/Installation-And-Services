@@ -10,6 +10,8 @@ export interface TaskStepData {
   longitude: number | null;
   step1At: string | null;
   evidenceUrl: string | null;
+  notes: string | null;
+  chartUrl: string | null;
   step2At: string | null;
   expenseAmount: number | null;
   expenseNotes: string | null;
@@ -17,8 +19,10 @@ export interface TaskStepData {
   step3At: string | null;
 }
 
+type TaskType = "INSTALLATION" | "COMPLAINT" | "SITE_VISIT";
+
 interface Props {
-  taskType: "INSTALLATION" | "COMPLAINT";
+  taskType: TaskType;
   taskId: string;
   isOpen: boolean;
   onClose: () => void;
@@ -28,7 +32,10 @@ interface Props {
   onUpdated?: () => void;
 }
 
-const stepLabels = ["Site Photo/Video & Location", "Work Complete Evidence", "Expense & Bills"];
+const stepLabelsFor = (taskType: TaskType) =>
+  taskType === "SITE_VISIT"
+    ? ["Site Photo/Video & Location", "Visit Details & Chart"]
+    : ["Site Photo/Video & Location", "Work Complete Evidence", "Expense & Bills"];
 
 export default function TaskProgressModal({ taskType, taskId, isOpen, onClose, mode, onUpdated }: Props) {
   const [step, setStep] = useState<TaskStepData | null>(null);
@@ -45,11 +52,16 @@ export default function TaskProgressModal({ taskType, taskId, isOpen, onClose, m
 
   // Step 2 form state
   const [evidence, setEvidence] = useState<File | null>(null);
+  const [visitNotes, setVisitNotes] = useState("");
+  const [chart, setChart] = useState<File | null>(null);
 
   // Step 3 form state
   const [expenseAmount, setExpenseAmount] = useState("");
   const [expenseNotes, setExpenseNotes] = useState("");
   const [bills, setBills] = useState<File[]>([]);
+
+  const totalSteps = taskType === "SITE_VISIT" ? 2 : 3;
+  const stepLabels = stepLabelsFor(taskType);
 
   const fetchStep = async () => {
     setLoading(true);
@@ -68,7 +80,15 @@ export default function TaskProgressModal({ taskType, taskId, isOpen, onClose, m
     if (isOpen) fetchStep();
   }, [isOpen, taskId, taskType]);
 
-  const currentStage = !step?.step1At ? 1 : !step?.step2At ? 2 : !step?.step3At ? 3 : 4;
+  const currentStage = !step?.step1At
+    ? 1
+    : !step?.step2At
+    ? 2
+    : totalSteps === 2
+    ? 3 // SiteVisit: done after step 2
+    : !step?.step3At
+    ? 3
+    : 4;
 
   const captureLocation = () => {
     setLocationError("");
@@ -128,6 +148,14 @@ export default function TaskProgressModal({ taskType, taskId, isOpen, onClose, m
 
   const handleStep2Submit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (taskType === "SITE_VISIT") {
+      if (!visitNotes.trim() || !chart) return;
+      submitStep(2, (fd) => {
+        fd.append("notes", visitNotes);
+        fd.append("chart", chart);
+      });
+      return;
+    }
     if (!evidence) return;
     submitStep(2, (fd) => fd.append("evidence", evidence));
   };
@@ -146,7 +174,7 @@ export default function TaskProgressModal({ taskType, taskId, isOpen, onClose, m
 
   const StepHeader = ({ n, label }: { n: number; label: string }) => (
     <div className="flex items-center gap-2">
-      {currentStage > n || (currentStage === 4 && n <= 3) ? (
+      {currentStage > n ? (
         <CheckCircle2 className="w-5 h-5 text-green-600" />
       ) : (
         <Circle className={`w-5 h-5 ${currentStage === n ? "text-blue-600" : "text-slate-300"}`} />
@@ -229,71 +257,104 @@ export default function TaskProgressModal({ taskType, taskId, isOpen, onClose, m
               <StepHeader n={2} label={stepLabels[1]} />
               {step?.step2At ? (
                 <div className="mt-3 text-sm text-slate-600 space-y-1">
-                  <a href={step.evidenceUrl || "#"} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline block">View evidence</a>
+                  {taskType === "SITE_VISIT" ? (
+                    <>
+                      {step.notes && <p className="whitespace-pre-wrap">{step.notes}</p>}
+                      {step.chartUrl && (
+                        <a href={step.chartUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline block">View site chart</a>
+                      )}
+                    </>
+                  ) : (
+                    <a href={step.evidenceUrl || "#"} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline block">View evidence</a>
+                  )}
                   <p className="text-xs text-slate-400">{new Date(step.step2At).toLocaleString()}</p>
                 </div>
               ) : mode === "doer" && currentStage === 2 ? (
                 <form onSubmit={handleStep2Submit} className="mt-3 space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Work Complete Evidence (photo/video)</label>
-                    <input type="file" accept="image/*,video/*" capture="environment" required
-                      onChange={(e) => setEvidence(e.target.files?.[0] || null)}
-                      className="block w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700" />
-                  </div>
-                  <button type="submit" disabled={!evidence || submitting}
-                    className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60">
-                    {submitting ? "Submitting..." : "Submit Step 2"}
-                  </button>
+                  {taskType === "SITE_VISIT" ? (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Site Visit Details</label>
+                        <textarea rows={3} required value={visitNotes} onChange={(e) => setVisitNotes(e.target.value)}
+                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Site Chart & Calculation</label>
+                        <input type="file" accept="image/*,application/pdf" required
+                          onChange={(e) => setChart(e.target.files?.[0] || null)}
+                          className="block w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700" />
+                      </div>
+                      <button type="submit" disabled={!visitNotes.trim() || !chart || submitting}
+                        className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60">
+                        {submitting ? "Submitting..." : "Submit Step 2 & Mark Completed"}
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <div>
+                        <label className="block text-xs font-medium text-slate-600 mb-1">Work Complete Evidence (photo/video)</label>
+                        <input type="file" accept="image/*,video/*" capture="environment" required
+                          onChange={(e) => setEvidence(e.target.files?.[0] || null)}
+                          className="block w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700" />
+                      </div>
+                      <button type="submit" disabled={!evidence || submitting}
+                        className="w-full bg-blue-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-blue-700 disabled:opacity-60">
+                        {submitting ? "Submitting..." : "Submit Step 2"}
+                      </button>
+                    </>
+                  )}
                 </form>
               ) : (
                 <p className="mt-2 text-xs text-slate-400">{currentStage < 2 ? "Locked" : "Pending"}</p>
               )}
             </div>
 
-            {/* Step 3 */}
-            <div className={`border border-slate-100 rounded-lg p-4 ${currentStage < 3 ? "opacity-50" : ""}`}>
-              <StepHeader n={3} label={stepLabels[2]} />
-              {step?.step3At ? (
-                <div className="mt-3 text-sm text-slate-600 space-y-1">
-                  <p>Amount: <span className="font-semibold">₹{step.expenseAmount}</span></p>
-                  {step.expenseNotes && <p className="text-xs text-slate-500">{step.expenseNotes}</p>}
-                  {step.billUrls && step.billUrls.length > 0 && (
-                    <div className="flex flex-wrap gap-2">
-                      {step.billUrls.map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">Bill {i + 1}</a>
-                      ))}
+            {/* Step 3 (Installation/Complaint only — SiteVisit ends at Step 2) */}
+            {totalSteps === 3 && (
+              <div className={`border border-slate-100 rounded-lg p-4 ${currentStage < 3 ? "opacity-50" : ""}`}>
+                <StepHeader n={3} label={stepLabels[2]} />
+                {step?.step3At ? (
+                  <div className="mt-3 text-sm text-slate-600 space-y-1">
+                    <p>Amount: <span className="font-semibold">₹{step.expenseAmount}</span></p>
+                    {step.expenseNotes && <p className="text-xs text-slate-500">{step.expenseNotes}</p>}
+                    {step.billUrls && step.billUrls.length > 0 && (
+                      <div className="flex flex-wrap gap-2">
+                        {step.billUrls.map((url, i) => (
+                          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline text-xs">Bill {i + 1}</a>
+                        ))}
+                      </div>
+                    )}
+                    <p className="text-xs text-slate-400">{new Date(step.step3At).toLocaleString()}</p>
+                  </div>
+                ) : mode === "doer" && currentStage === 3 ? (
+                  <form onSubmit={handleStep3Submit} className="mt-3 space-y-3">
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Expense Amount (₹)</label>
+                      <input type="number" step="0.01" min="0" required value={expenseAmount}
+                        onChange={(e) => setExpenseAmount(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" />
                     </div>
-                  )}
-                  <p className="text-xs text-slate-400">{new Date(step.step3At).toLocaleString()}</p>
-                </div>
-              ) : mode === "doer" && currentStage === 3 ? (
-                <form onSubmit={handleStep3Submit} className="mt-3 space-y-3">
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Expense Amount (₹)</label>
-                    <input type="number" step="0.01" min="0" required value={expenseAmount}
-                      onChange={(e) => setExpenseAmount(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Notes (optional)</label>
-                    <textarea rows={2} value={expenseNotes} onChange={(e) => setExpenseNotes(e.target.value)}
-                      className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-slate-600 mb-1">Upload Bills (optional, multiple allowed)</label>
-                    <input type="file" accept="image/*,application/pdf" multiple
-                      onChange={(e) => setBills(Array.from(e.target.files || []))}
-                      className="block w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700" />
-                  </div>
-                  <button type="submit" disabled={!expenseAmount || submitting}
-                    className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60">
-                    {submitting ? "Submitting..." : "Submit Step 3 & Mark Completed"}
-                  </button>
-                </form>
-              ) : (
-                <p className="mt-2 text-xs text-slate-400">{currentStage < 3 ? "Locked" : "Pending"}</p>
-              )}
-            </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Notes (optional)</label>
+                      <textarea rows={2} value={expenseNotes} onChange={(e) => setExpenseNotes(e.target.value)}
+                        className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm text-slate-900" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-slate-600 mb-1">Upload Bills (optional, multiple allowed)</label>
+                      <input type="file" accept="image/*,application/pdf" multiple
+                        onChange={(e) => setBills(Array.from(e.target.files || []))}
+                        className="block w-full text-sm text-slate-600 file:mr-3 file:py-1.5 file:px-3 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700" />
+                    </div>
+                    <button type="submit" disabled={!expenseAmount || submitting}
+                      className="w-full bg-green-600 text-white py-2 rounded-lg text-sm font-medium hover:bg-green-700 disabled:opacity-60">
+                      {submitting ? "Submitting..." : "Submit Step 3 & Mark Completed"}
+                    </button>
+                  </form>
+                ) : (
+                  <p className="mt-2 text-xs text-slate-400">{currentStage < 3 ? "Locked" : "Pending"}</p>
+                )}
+              </div>
+            )}
           </div>
         )}
 

@@ -66,6 +66,8 @@ CREATE TABLE `TaskStep` (
     `longitude` DOUBLE NULL,
     `step1At` DATETIME(3) NULL,
     `evidenceUrl` VARCHAR(191) NULL,
+    `notes` TEXT NULL,
+    `chartUrl` VARCHAR(191) NULL,
     `step2At` DATETIME(3) NULL,
     `expenseAmount` DOUBLE NULL,
     `expenseNotes` VARCHAR(191) NULL,
@@ -75,6 +77,27 @@ CREATE TABLE `TaskStep` (
     `updatedAt` DATETIME(3) NOT NULL,
 
     UNIQUE INDEX `TaskStep_taskType_taskId_key`(`taskType`, `taskId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
+CREATE TABLE `SiteVisit` (
+    `id` VARCHAR(191) NOT NULL,
+    `serialNo` INTEGER NOT NULL AUTO_INCREMENT,
+    `raisedById` VARCHAR(191) NULL,
+    `customerName` VARCHAR(191) NOT NULL,
+    `siteAddress` VARCHAR(191) NULL,
+    `siteLatitude` DOUBLE NULL,
+    `siteLongitude` DOUBLE NULL,
+    `attendantName` VARCHAR(191) NULL,
+    `attendantPhone` VARCHAR(191) NULL,
+    `visitFor` VARCHAR(191) NOT NULL,
+    `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
+    `assignedDoerId` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `SiteVisit_serialNo_key`(`serialNo`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -107,6 +130,12 @@ ALTER TABLE `Installation` ADD CONSTRAINT `Installation_assignedDoerId_fkey` FOR
 
 -- AddForeignKey
 ALTER TABLE `Complaint` ADD CONSTRAINT `Complaint_assignedDoerId_fkey` FOREIGN KEY (`assignedDoerId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `SiteVisit` ADD CONSTRAINT `SiteVisit_raisedById_fkey` FOREIGN KEY (`raisedById`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE `SiteVisit` ADD CONSTRAINT `SiteVisit_assignedDoerId_fkey` FOREIGN KEY (`assignedDoerId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- Seed: Master Admin user (password: Manoj@123 — change after first login)
 INSERT INTO `User` (`id`, `name`, `email`, `password`, `role`, `createdAt`, `updatedAt`)
