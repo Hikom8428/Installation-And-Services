@@ -186,7 +186,7 @@ export default function TaskProgressModal({ taskType, taskId, isOpen, onClose, m
   );
 
   return (
-    <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+    <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
       <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-lg max-h-[85vh] overflow-y-auto">
         <h3 className="text-lg font-bold mb-4 text-slate-900">Task Progress</h3>
 

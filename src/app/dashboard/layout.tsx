@@ -3,8 +3,8 @@
 import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { useEffect } from "react";
-import { LayoutDashboard, Users, FileText, ClipboardList, LogOut, Wrench, Menu, MapPin } from "lucide-react";
+import { useEffect, useState } from "react";
+import { LayoutDashboard, Users, FileText, ClipboardList, LogOut, Wrench, Menu, MapPin, X } from "lucide-react";
 
 export default function DashboardLayout({
   children,
@@ -14,12 +14,18 @@ export default function DashboardLayout({
   const { data: session, status } = useSession();
   const router = useRouter();
   const pathname = usePathname();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
 
   useEffect(() => {
     if (status === "unauthenticated") {
       router.push("/login");
     }
   }, [status, router]);
+
+  // Close the mobile sidebar whenever the route changes
+  useEffect(() => {
+    setSidebarOpen(false);
+  }, [pathname]);
 
   if (status === "loading") {
     return (
@@ -42,16 +48,31 @@ export default function DashboardLayout({
   ];
 
   return (
-    <div className="flex h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* Sidebar Desktop */}
-      <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-20">
-        <div className="h-16 flex items-center px-6 bg-slate-950/50 border-b border-slate-800">
+    <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
+      {/* Backdrop, mobile only, shown while the sidebar is open */}
+      {sidebarOpen && (
+        <div
+          className="fixed inset-0 bg-slate-900/50 z-30 lg:hidden"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+
+      {/* Sidebar — off-canvas drawer on mobile, always visible from lg up */}
+      <aside
+        className={`fixed inset-y-0 left-0 w-64 bg-slate-900 text-slate-300 flex flex-col shadow-xl z-40 transform transition-transform duration-200 ease-in-out lg:static lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
+      >
+        <div className="h-16 flex items-center justify-between px-6 bg-slate-950/50 border-b border-slate-800">
           <div className="flex items-center gap-2 text-white">
             <Wrench className="w-6 h-6 text-blue-500" />
             <span className="text-xl font-bold tracking-wide">HICON</span>
           </div>
+          <button onClick={() => setSidebarOpen(false)} className="text-slate-400 hover:text-white lg:hidden">
+            <X className="w-5 h-5" />
+          </button>
         </div>
-        
+
         <div className="p-6 border-b border-slate-800">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold shadow-md">
@@ -97,17 +118,17 @@ export default function DashboardLayout({
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden">
+      <div className="flex-1 flex flex-col overflow-hidden w-full">
         {/* Header Mobile */}
-        <header className="h-16 bg-white border-b border-slate-200 flex items-center px-6 lg:hidden shadow-sm">
-           <button className="text-slate-500 hover:text-slate-700">
+        <header className="h-16 bg-white border-b border-slate-200 flex items-center px-4 sm:px-6 lg:hidden shadow-sm flex-shrink-0">
+           <button onClick={() => setSidebarOpen(true)} className="text-slate-500 hover:text-slate-700">
              <Menu className="w-6 h-6" />
            </button>
            <span className="ml-4 font-bold text-lg text-slate-800">HICON</span>
         </header>
 
         {/* Page Content */}
-        <main className="flex-1 overflow-y-auto p-6 md:p-8">
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8">
           <div className="max-w-7xl mx-auto">
             {children}
           </div>

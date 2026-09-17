@@ -286,8 +286,8 @@ export default function InstallationsDashboard() {
 
       {/* Assign Modal */}
       {assignModal.isOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-lg w-96">
+        <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-sm">
             <h3 className="text-lg font-bold mb-4 text-slate-900">Assign to Doer</h3>
             <select
               className="w-full p-2.5 border border-slate-200 rounded-lg mb-4 text-sm"
@@ -321,7 +321,7 @@ export default function InstallationsDashboard() {
 
       {/* Configure Columns Modal */}
       {columnModal.isOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
+        <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
           <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-lg max-h-[80vh] flex flex-col">
             <h3 className="text-lg font-bold mb-1 text-slate-900">Configure Columns</h3>
             <p className="text-sm text-slate-500 mb-4">

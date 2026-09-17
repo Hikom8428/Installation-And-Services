@@ -211,8 +211,8 @@ export default function ComplaintsDashboard() {
 
       {/* Assign Modal */}
       {assignModal.isOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
-          <div className="bg-white p-6 rounded-md shadow-lg w-96">
+        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center p-4">
+          <div className="bg-white p-6 rounded-md shadow-lg w-full max-w-sm">
             <h3 className="text-lg font-bold mb-4">Assign to Doer</h3>
             <select className="w-full p-2 border rounded mb-4" onChange={(e) => handleAssign(e.target.value)}>
               <option value="">Select a Doer...</option>
