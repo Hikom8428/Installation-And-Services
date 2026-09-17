@@ -249,11 +249,21 @@ export default function InstallationsDashboard() {
               ) : (
                 installations.map((inst) => (
                   <tr key={inst.id} className="hover:bg-slate-50 transition-colors">
-                    {displayColumns.map((col) => (
-                      <td key={col} className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">
-                        {inst.data?.[col] || (col === "Client Name" ? inst.customerName : "-")}
-                      </td>
-                    ))}
+                    {displayColumns.map((col) => {
+                      const value = inst.data?.[col] || (col === "Client Name" ? inst.customerName : "");
+                      const isLink = /^https?:\/\//i.test(value);
+                      return (
+                        <td key={col} className="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">
+                          {isLink ? (
+                            <a href={value} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                              View
+                            </a>
+                          ) : (
+                            value || "-"
+                          )}
+                        </td>
+                      );
+                    })}
                     <td className="px-6 py-4 whitespace-nowrap">
                       <span className={`px-2.5 py-1 inline-flex text-xs font-semibold rounded-full ${getStatusColor(inst.status)}`}>
                         {inst.status}
