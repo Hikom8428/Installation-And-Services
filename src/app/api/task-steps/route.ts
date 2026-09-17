@@ -5,13 +5,12 @@ import { authOptions } from "@/lib/auth";
 import { randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
-import { isTaskAssignedToDoer } from "@/lib/taskAssignments";
+import { isTaskAssignedToDoer, isTaskAssignedToDoerInCycle } from "@/lib/taskAssignments";
+import { getTaskCore, updateTaskCore, TaskType } from "@/lib/taskCore";
 import { sendPushToUsers } from "@/lib/onesignal-server";
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
 const MAX_VIDEO_BYTES = 30 * 1024 * 1024; // 30MB
-
-type TaskType = "INSTALLATION" | "COMPLAINT" | "SITE_VISIT";
 
 const taskTypeLabel: Record<TaskType, string> = {
   INSTALLATION: "Installation",
@@ -32,32 +31,6 @@ async function notifyStaffOfStepCompletion(taskType: TaskType, stepNumber: numbe
   });
 }
 
-// All task types share the same 3-step flow: site photo/video+location,
-// then work evidence (or, for SiteVisit, visit notes + chart), then expense/bills.
-function totalStepsFor(_taskType: TaskType) {
-  return 3;
-}
-
-async function getTask(taskType: TaskType, taskId: string) {
-  if (taskType === "INSTALLATION") {
-    return prisma.installation.findUnique({ where: { id: taskId } });
-  }
-  if (taskType === "SITE_VISIT") {
-    return prisma.siteVisit.findUnique({ where: { id: taskId } });
-  }
-  return prisma.complaint.findUnique({ where: { id: taskId } });
-}
-
-async function setTaskStatus(taskType: TaskType, taskId: string, status: string) {
-  if (taskType === "INSTALLATION") {
-    await prisma.installation.update({ where: { id: taskId }, data: { status } });
-  } else if (taskType === "SITE_VISIT") {
-    await prisma.siteVisit.update({ where: { id: taskId }, data: { status } });
-  } else {
-    await prisma.complaint.update({ where: { id: taskId }, data: { status } });
-  }
-}
-
 async function saveUploadedFile(file: File, maxBytes: number): Promise<string> {
   if (file.size > maxBytes) {
     throw new Error(`FILE_TOO_LARGE:${file.name}`);
@@ -75,8 +48,10 @@ function isValidTaskType(value: string | null): value is TaskType {
   return value === "INSTALLATION" || value === "COMPLAINT" || value === "SITE_VISIT";
 }
 
-// GET /api/task-steps?taskType=INSTALLATION&taskId=xxx
-// Returns the current step progress for one task.
+// GET /api/task-steps?taskType=INSTALLATION&taskId=xxx&cycle=2
+// Returns step progress for one task. `cycle` is optional and defaults to
+// the task's current (active) cycle — pass a past cycle number to view
+// history from a previous round.
 export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -87,26 +62,32 @@ export async function GET(req: Request) {
     const { searchParams } = new URL(req.url);
     const taskType = searchParams.get("taskType");
     const taskId = searchParams.get("taskId");
+    const cycleParam = searchParams.get("cycle");
 
     if (!isValidTaskType(taskType) || !taskId) {
       return NextResponse.json({ message: "taskType and taskId are required" }, { status: 400 });
     }
 
-    const task = await getTask(taskType, taskId);
+    const task = await getTaskCore(taskType, taskId);
     if (!task) {
       return NextResponse.json({ message: "Task not found" }, { status: 404 });
     }
 
-    const isAssignedDoer =
-      session.user.role === "DOER" && (await isTaskAssignedToDoer(taskType, taskId, session.user.id));
+    const cycle = cycleParam ? parseInt(cycleParam, 10) : task.currentCycle;
     const isStaff = session.user.role === "MASTER" || session.user.role === "ADMIN" || session.user.role === "MANAGER";
+    const isAssignedDoer =
+      session.user.role === "DOER" &&
+      (cycle === task.currentCycle
+        ? await isTaskAssignedToDoer(taskType, taskId, session.user.id)
+        : await isTaskAssignedToDoerInCycle(taskType, taskId, session.user.id, cycle));
+
     if (!isAssignedDoer && !isStaff) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    const step = await prisma.taskStep.findUnique({ where: { taskType_taskId: { taskType, taskId } } });
+    const step = await prisma.taskStep.findUnique({ where: { taskType_taskId_cycle: { taskType, taskId, cycle } } });
 
-    return NextResponse.json({ step }, { status: 200 });
+    return NextResponse.json({ step, cycle }, { status: 200 });
   } catch (error) {
     console.error("Error fetching task step:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
@@ -114,7 +95,9 @@ export async function GET(req: Request) {
 }
 
 // POST /api/task-steps — multipart/form-data. Only the Doer assigned to the
-// task can submit a step, and steps must be completed in order (1, 2, 3).
+// task's CURRENT cycle can submit a step, and steps must be completed in
+// order (1, 2, 3). Submitting step 3 marks that cycle COMPLETED; staff can
+// then reopen the task (via Assign Doer) to start a new cycle.
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -131,7 +114,7 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "taskType, taskId, and a valid step (1-3) are required" }, { status: 400 });
     }
 
-    const task = await getTask(taskType, taskId);
+    const task = await getTaskCore(taskType, taskId);
     if (!task) {
       return NextResponse.json({ message: "Task not found" }, { status: 404 });
     }
@@ -139,12 +122,8 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "This task is not assigned to you" }, { status: 403 });
     }
 
-    const maxStep = totalStepsFor(taskType);
-    if (Number(step) > maxStep) {
-      return NextResponse.json({ message: `This task only has ${maxStep} steps` }, { status: 400 });
-    }
-
-    const existing = await prisma.taskStep.findUnique({ where: { taskType_taskId: { taskType, taskId } } });
+    const cycle = task.currentCycle;
+    const existing = await prisma.taskStep.findUnique({ where: { taskType_taskId_cycle: { taskType, taskId, cycle } } });
 
     if (step === "1") {
       const sitePhoto = formData.get("sitePhoto");
@@ -166,13 +145,13 @@ export async function POST(req: Request) {
       }
 
       await prisma.taskStep.upsert({
-        where: { taskType_taskId: { taskType, taskId } },
+        where: { taskType_taskId_cycle: { taskType, taskId, cycle } },
         update: { sitePhotoUrl, siteVideoUrl, latitude, longitude, step1At: new Date() },
-        create: { taskType, taskId, sitePhotoUrl, siteVideoUrl, latitude, longitude, step1At: new Date() },
+        create: { taskType, taskId, cycle, sitePhotoUrl, siteVideoUrl, latitude, longitude, step1At: new Date() },
       });
 
       if (task.status !== "COMPLETED") {
-        await setTaskStatus(taskType, taskId, "IN_PROGRESS");
+        await updateTaskCore(taskType, taskId, { status: "IN_PROGRESS" });
       }
     } else if (step === "2") {
       if (!existing?.step1At) {
@@ -191,7 +170,7 @@ export async function POST(req: Request) {
         const chartUrl = await saveUploadedFile(chart, MAX_IMAGE_BYTES);
 
         await prisma.taskStep.update({
-          where: { taskType_taskId: { taskType, taskId } },
+          where: { taskType_taskId_cycle: { taskType, taskId, cycle } },
           data: { notes, chartUrl, step2At: new Date() },
         });
       } else {
@@ -202,7 +181,7 @@ export async function POST(req: Request) {
         const evidenceUrl = await saveUploadedFile(evidence, MAX_VIDEO_BYTES);
 
         await prisma.taskStep.update({
-          where: { taskType_taskId: { taskType, taskId } },
+          where: { taskType_taskId_cycle: { taskType, taskId, cycle } },
           data: { evidenceUrl, step2At: new Date() },
         });
       }
@@ -225,16 +204,16 @@ export async function POST(req: Request) {
       }
 
       await prisma.taskStep.update({
-        where: { taskType_taskId: { taskType, taskId } },
+        where: { taskType_taskId_cycle: { taskType, taskId, cycle } },
         data: { expenseAmount, expenseNotes, billUrls, step3At: new Date() },
       });
 
-      await setTaskStatus(taskType, taskId, "COMPLETED");
+      await updateTaskCore(taskType, taskId, { status: "COMPLETED" });
     }
 
     await notifyStaffOfStepCompletion(taskType, Number(step), session.user.name || "A Doer", task.customerName);
 
-    const updated = await prisma.taskStep.findUnique({ where: { taskType_taskId: { taskType, taskId } } });
+    const updated = await prisma.taskStep.findUnique({ where: { taskType_taskId_cycle: { taskType, taskId, cycle } } });
     return NextResponse.json({ step: updated }, { status: 200 });
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("FILE_TOO_LARGE")) {

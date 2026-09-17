@@ -41,6 +41,7 @@ CREATE TABLE `Installation` (
     `customerAddress` VARCHAR(191) NULL,
     `productDetails` VARCHAR(191) NULL,
     `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
+    `currentCycle` INTEGER NOT NULL DEFAULT 1,
     `syncDate` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
     `data` JSON NULL,
@@ -55,11 +56,12 @@ CREATE TABLE `TaskAssignment` (
     `taskType` VARCHAR(191) NOT NULL,
     `taskId` VARCHAR(191) NOT NULL,
     `doerId` VARCHAR(191) NOT NULL,
+    `cycle` INTEGER NOT NULL DEFAULT 1,
     `fundAmount` DOUBLE NULL,
     `fundNotes` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
 
-    UNIQUE INDEX `TaskAssignment_taskType_taskId_doerId_key`(`taskType`, `taskId`, `doerId`),
+    UNIQUE INDEX `TaskAssignment_taskType_taskId_doerId_cycle_key`(`taskType`, `taskId`, `doerId`, `cycle`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -77,6 +79,7 @@ CREATE TABLE `TaskStep` (
     `id` VARCHAR(191) NOT NULL,
     `taskType` VARCHAR(191) NOT NULL,
     `taskId` VARCHAR(191) NOT NULL,
+    `cycle` INTEGER NOT NULL DEFAULT 1,
     `sitePhotoUrl` VARCHAR(191) NULL,
     `siteVideoUrl` VARCHAR(191) NULL,
     `latitude` DOUBLE NULL,
@@ -93,7 +96,7 @@ CREATE TABLE `TaskStep` (
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
-    UNIQUE INDEX `TaskStep_taskType_taskId_key`(`taskType`, `taskId`),
+    UNIQUE INDEX `TaskStep_taskType_taskId_cycle_key`(`taskType`, `taskId`, `cycle`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
@@ -112,6 +115,7 @@ CREATE TABLE `SiteVisit` (
     `attendantPhone` VARCHAR(191) NULL,
     `visitFor` VARCHAR(191) NOT NULL,
     `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
+    `currentCycle` INTEGER NOT NULL DEFAULT 1,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 
@@ -136,6 +140,7 @@ CREATE TABLE `Complaint` (
     `attachmentUrl` VARCHAR(191) NULL,
     `mediaUrls` JSON NULL,
     `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
+    `currentCycle` INTEGER NOT NULL DEFAULT 1,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
     `updatedAt` DATETIME(3) NOT NULL,
 

@@ -15,10 +15,12 @@ export default function CompletedTaskSummary({
   assignments,
   stepSummary,
   showExpense,
+  roundLabel,
 }: {
   assignments: AssignmentInfo[];
   stepSummary: StepSummary | null;
   showExpense: boolean;
+  roundLabel?: string;
 }) {
   const totalFund = assignments.reduce((sum, a) => sum + (a.fundAmount || 0), 0);
   const expense = stepSummary?.expenseAmount ?? null;
@@ -26,6 +28,9 @@ export default function CompletedTaskSummary({
 
   return (
     <div className="text-xs space-y-1 min-w-[10rem]">
+      {roundLabel && (
+        <span className="inline-block mb-1 px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-800 font-semibold">{roundLabel}</span>
+      )}
       <div className="flex justify-between gap-3">
         <span className="text-slate-400">Fund Given</span>
         <span className="font-medium text-slate-700">{totalFund > 0 ? `₹${totalFund.toLocaleString()}` : "-"}</span>

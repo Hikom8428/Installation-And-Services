@@ -30,6 +30,11 @@ interface Props {
   // "view": read-only (Master/Admin/Manager checking progress + location).
   mode: "doer" | "view";
   onUpdated?: () => void;
+  // Which round of this task to show. Omit for the task's current/active
+  // cycle; pass a past round number (from the Completed tab's history) to
+  // view that round read-only.
+  cycle?: number;
+  roundLabel?: string;
 }
 
 const stepLabelsFor = (taskType: TaskType) =>
@@ -37,7 +42,7 @@ const stepLabelsFor = (taskType: TaskType) =>
     ? ["Site Photo/Video & Location", "Visit Details & Chart", "Expense & Bills"]
     : ["Site Photo/Video & Location", "Work Complete Evidence", "Expense & Bills"];
 
-export default function TaskProgressModal({ taskType, taskId, isOpen, onClose, mode, onUpdated }: Props) {
+export default function TaskProgressModal({ taskType, taskId, isOpen, onClose, mode, onUpdated, cycle, roundLabel }: Props) {
   const [step, setStep] = useState<TaskStepData | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
@@ -66,7 +71,8 @@ export default function TaskProgressModal({ taskType, taskId, isOpen, onClose, m
   const fetchStep = async () => {
     setLoading(true);
     try {
-      const res = await fetch(`/api/task-steps?taskType=${taskType}&taskId=${taskId}`);
+      const url = `/api/task-steps?taskType=${taskType}&taskId=${taskId}${cycle ? `&cycle=${cycle}` : ""}`;
+      const res = await fetch(url);
       const data = await res.json();
       if (res.ok) setStep(data.step);
     } catch (e) {
@@ -78,7 +84,7 @@ export default function TaskProgressModal({ taskType, taskId, isOpen, onClose, m
 
   useEffect(() => {
     if (isOpen) fetchStep();
-  }, [isOpen, taskId, taskType]);
+  }, [isOpen, taskId, taskType, cycle]);
 
   const currentStage = !step?.step1At
     ? 1
@@ -186,7 +192,10 @@ export default function TaskProgressModal({ taskType, taskId, isOpen, onClose, m
   return (
     <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
       <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-lg max-h-[85vh] overflow-y-auto">
-        <h3 className="text-lg font-bold mb-4 text-slate-900">Task Progress</h3>
+        <h3 className="text-lg font-bold mb-4 text-slate-900 flex items-center gap-2">
+          Task Progress
+          {roundLabel && <span className="px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-800 font-semibold">{roundLabel}</span>}
+        </h3>
 
         {loading ? (
           <div className="py-8 text-center text-slate-500 text-sm">Loading...</div>

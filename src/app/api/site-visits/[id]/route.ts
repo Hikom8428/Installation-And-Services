@@ -40,11 +40,7 @@ export async function PATCH(
       return NextResponse.json({ message: "Site Visit not found" }, { status: 404 });
     }
 
-    await assignDoers("SITE_VISIT", id, doerIds, fundAmount, fundNotes, siteVisit.customerName);
-
-    if (siteVisit.status === "PENDING") {
-      await prisma.siteVisit.update({ where: { id }, data: { status: "ASSIGNED" } });
-    }
+    await assignDoers("SITE_VISIT", id, doerIds, fundAmount, fundNotes);
 
     const updated = await prisma.siteVisit.findUnique({ where: { id } });
     return NextResponse.json(updated, { status: 200 });

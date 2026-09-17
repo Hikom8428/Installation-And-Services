@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAssignedTaskIds, attachAssignments, attachStepSummary } from "@/lib/taskAssignments";
+import { getAssignedTaskIds, attachAssignments, attachStepSummary, getCompletedCycles } from "@/lib/taskAssignments";
 
 const VALID_VISIT_FOR = ["DOOR", "PANEL", "DOOR_PANEL"];
 
@@ -59,29 +59,46 @@ export async function GET() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    let siteVisits;
-    if (session.user.role === "DOER") {
-      const taskIds = await getAssignedTaskIds("SITE_VISIT", session.user.id);
-      siteVisits = await prisma.siteVisit.findMany({
-        where: { id: { in: taskIds } },
-        orderBy: { createdAt: "desc" },
-        include: {
-          raisedBy: { select: { name: true } },
-        },
-      });
-    } else {
-      siteVisits = await prisma.siteVisit.findMany({
-        orderBy: { createdAt: "desc" },
-        include: {
-          raisedBy: { select: { name: true } },
-        },
-      });
-    }
+    const isDoer = session.user.role === "DOER";
 
-    const withAssignments = await attachAssignments("SITE_VISIT", siteVisits);
-    const withSteps = await attachStepSummary("SITE_VISIT", withAssignments);
+    const pendingWhere = isDoer
+      ? { id: { in: await getAssignedTaskIds("SITE_VISIT", session.user.id) }, status: { not: "COMPLETED" } }
+      : { status: { not: "COMPLETED" } };
+    const pendingTasks = await prisma.siteVisit.findMany({
+      where: pendingWhere,
+      orderBy: { createdAt: "desc" },
+      include: { raisedBy: { select: { name: true } } },
+    });
+    const pendingWithAssignments = await attachAssignments("SITE_VISIT", pendingTasks);
+    const pending = await attachStepSummary("SITE_VISIT", pendingWithAssignments);
 
-    return NextResponse.json(withSteps, { status: 200 });
+    const cycles = await getCompletedCycles("SITE_VISIT", isDoer ? session.user.id : undefined);
+    const baseIds = [...new Set(cycles.map((c) => c.taskId))];
+    const baseTasks = baseIds.length
+      ? await prisma.siteVisit.findMany({ where: { id: { in: baseIds } }, include: { raisedBy: { select: { name: true } } } })
+      : [];
+    const baseById = new Map(baseTasks.map((t) => [t.id, t]));
+
+    const completed = cycles
+      .map((c) => {
+        const base = baseById.get(c.taskId);
+        if (!base) return null;
+        return {
+          ...base,
+          id: `${c.taskId}::c${c.cycle}`,
+          taskId: c.taskId,
+          cycle: c.cycle,
+          roundLabel: `Round ${c.cycle}`,
+          isReopenable: base.status === "COMPLETED" && base.currentCycle === c.cycle,
+          status: "COMPLETED",
+          assignments: c.assignments,
+          stepSummary: c.stepSummary,
+        };
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null)
+      .sort((a, b) => (b.stepSummary.step3At?.getTime() || 0) - (a.stepSummary.step3At?.getTime() || 0));
+
+    return NextResponse.json({ pending, completed }, { status: 200 });
   } catch (error) {
     console.error("Error fetching site visits:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

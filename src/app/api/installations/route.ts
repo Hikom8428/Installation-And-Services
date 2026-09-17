@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAssignedTaskIds, attachAssignments, attachStepSummary } from "@/lib/taskAssignments";
+import { getAssignedTaskIds, attachAssignments, attachStepSummary, getCompletedCycles } from "@/lib/taskAssignments";
 
 export async function GET() {
   try {
@@ -11,24 +11,42 @@ export async function GET() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    let installations;
+    const isDoer = session.user.role === "DOER";
 
-    if (session.user.role === "DOER") {
-      const taskIds = await getAssignedTaskIds("INSTALLATION", session.user.id);
-      installations = await prisma.installation.findMany({
-        where: { id: { in: taskIds } },
-        orderBy: { syncDate: 'desc' }
-      });
-    } else {
-      installations = await prisma.installation.findMany({
-        orderBy: { syncDate: 'desc' },
-      });
-    }
+    // Pending: not-yet-completed tasks, scoped to this Doer's active cycle if a Doer.
+    const pendingWhere = isDoer
+      ? { id: { in: await getAssignedTaskIds("INSTALLATION", session.user.id) }, status: { not: "COMPLETED" } }
+      : { status: { not: "COMPLETED" } };
+    const pendingTasks = await prisma.installation.findMany({ where: pendingWhere, orderBy: { syncDate: "desc" } });
+    const pendingWithAssignments = await attachAssignments("INSTALLATION", pendingTasks);
+    const pending = await attachStepSummary("INSTALLATION", pendingWithAssignments);
 
-    const withAssignments = await attachAssignments("INSTALLATION", installations);
-    const withSteps = await attachStepSummary("INSTALLATION", withAssignments);
+    // Completed: full reopen/reassign history — one row per completed cycle.
+    const cycles = await getCompletedCycles("INSTALLATION", isDoer ? session.user.id : undefined);
+    const baseIds = [...new Set(cycles.map((c) => c.taskId))];
+    const baseTasks = baseIds.length ? await prisma.installation.findMany({ where: { id: { in: baseIds } } }) : [];
+    const baseById = new Map(baseTasks.map((t) => [t.id, t]));
 
-    return NextResponse.json(withSteps, { status: 200 });
+    const completed = cycles
+      .map((c) => {
+        const base = baseById.get(c.taskId);
+        if (!base) return null;
+        return {
+          ...base,
+          id: `${c.taskId}::c${c.cycle}`,
+          taskId: c.taskId,
+          cycle: c.cycle,
+          roundLabel: `Round ${c.cycle}`,
+          isReopenable: base.status === "COMPLETED" && base.currentCycle === c.cycle,
+          status: "COMPLETED",
+          assignments: c.assignments,
+          stepSummary: c.stepSummary,
+        };
+      })
+      .filter((c): c is NonNullable<typeof c> => c !== null)
+      .sort((a, b) => (b.stepSummary.step3At?.getTime() || 0) - (a.stepSummary.step3At?.getTime() || 0));
+
+    return NextResponse.json({ pending, completed }, { status: 200 });
   } catch (error) {
     console.error("Error fetching installations:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

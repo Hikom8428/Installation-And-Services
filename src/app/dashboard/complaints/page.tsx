@@ -26,6 +26,11 @@ interface Complaint {
   createdAt: string;
   assignments: AssignmentInfo[];
   stepSummary: StepSummary | null;
+  // Present only on Completed-tab (history) rows — each is one past round.
+  taskId?: string;
+  cycle?: number;
+  roundLabel?: string;
+  isReopenable?: boolean;
 }
 
 interface Doer {
@@ -35,20 +40,24 @@ interface Doer {
 
 export default function ComplaintsDashboard() {
   const { data: session } = useSession();
-  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [pendingComplaints, setPendingComplaints] = useState<Complaint[]>([]);
+  const [completedComplaints, setCompletedComplaints] = useState<Complaint[]>([]);
   const [doers, setDoers] = useState<Doer[]>([]);
   const [loading, setLoading] = useState(true);
-  
+
   // Modals state
   const [assignModal, setAssignModal] = useState<{ isOpen: boolean; complaintId: string }>({ isOpen: false, complaintId: "" });
-  const [progressModal, setProgressModal] = useState<{ isOpen: boolean; complaintId: string }>({ isOpen: false, complaintId: "" });
+  const [progressModal, setProgressModal] = useState<{ isOpen: boolean; complaintId: string; cycle?: number; roundLabel?: string }>({ isOpen: false, complaintId: "" });
   const [activeTab, setActiveTab] = useState<"PENDING" | "COMPLETED">("PENDING");
 
   const fetchComplaints = async () => {
     try {
       const res = await fetch("/api/complaints");
       const data = await res.json();
-      if (res.ok) setComplaints(data);
+      if (res.ok) {
+        setPendingComplaints(data.pending || []);
+        setCompletedComplaints(data.completed || []);
+      }
     } catch (error) {
       console.error("Failed to fetch complaints", error);
     } finally {
@@ -87,8 +96,6 @@ export default function ComplaintsDashboard() {
 
   if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
-  const pendingComplaints = complaints.filter((c) => c.status !== "COMPLETED");
-  const completedComplaints = complaints.filter((c) => c.status === "COMPLETED");
   const visibleComplaints = activeTab === "COMPLETED" ? completedComplaints : pendingComplaints;
 
   return (
@@ -200,11 +207,25 @@ export default function ComplaintsDashboard() {
                   </td>
                   {activeTab === "COMPLETED" && (
                     <td className="px-6 py-4">
-                      <CompletedTaskSummary assignments={complaint.assignments} stepSummary={complaint.stepSummary} showExpense />
+                      <CompletedTaskSummary assignments={complaint.assignments} stepSummary={complaint.stepSummary} showExpense roundLabel={complaint.roundLabel} />
                     </td>
                   )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {session?.user.role !== "DOER" ? (
+                    {activeTab === "COMPLETED" ? (
+                      <div className="flex items-center gap-3">
+                        {session?.user.role !== "DOER" && complaint.isReopenable && (
+                          <button onClick={() => setAssignModal({ isOpen: true, complaintId: complaint.taskId || complaint.id })} className="text-indigo-600 hover:text-indigo-900">
+                            Reassign Doer
+                          </button>
+                        )}
+                        <button
+                          onClick={() => setProgressModal({ isOpen: true, complaintId: complaint.taskId || complaint.id, cycle: complaint.cycle, roundLabel: complaint.roundLabel })}
+                          className="text-blue-600 hover:text-blue-900"
+                        >
+                          View Progress
+                        </button>
+                      </div>
+                    ) : session?.user.role !== "DOER" ? (
                       <div className="flex items-center gap-3">
                         <button onClick={() => setAssignModal({ isOpen: true, complaintId: complaint.id })} className="text-indigo-600 hover:text-indigo-900">Assign Doer</button>
                         {complaint.assignments.length > 0 && (
@@ -223,7 +244,7 @@ export default function ComplaintsDashboard() {
         </div>
       </div>
 
-      {/* Assign Modal */}
+      {/* Assign Modal — reopening a Completed task always starts a fresh (empty) cycle */}
       {assignModal.isOpen && (
         <AssignDoersModal
           taskType="COMPLAINT"
@@ -231,7 +252,7 @@ export default function ComplaintsDashboard() {
           isOpen={assignModal.isOpen}
           onClose={() => setAssignModal({ isOpen: false, complaintId: "" })}
           doers={doers}
-          currentAssignments={complaints.find((c) => c.id === assignModal.complaintId)?.assignments || []}
+          currentAssignments={pendingComplaints.find((c) => c.id === assignModal.complaintId)?.assignments || []}
           onUpdated={fetchComplaints}
         />
       )}
@@ -243,7 +264,9 @@ export default function ComplaintsDashboard() {
           taskId={progressModal.complaintId}
           isOpen={progressModal.isOpen}
           onClose={() => setProgressModal({ isOpen: false, complaintId: "" })}
-          mode={session?.user.role === "DOER" ? "doer" : "view"}
+          mode={activeTab === "COMPLETED" ? "view" : session?.user.role === "DOER" ? "doer" : "view"}
+          cycle={progressModal.cycle}
+          roundLabel={progressModal.roundLabel}
           onUpdated={fetchComplaints}
         />
       )}

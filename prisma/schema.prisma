@@ -28,26 +28,30 @@ model Installation {
   customerAddress String?
   productDetails String?
   status         String     @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
+  currentCycle   Int        @default(1) // bumped each time a COMPLETED task is reopened/reassigned
   syncDate       DateTime   @default(now())
   updatedAt      DateTime   @updatedAt
   data           Json?      // raw Google Sheet values for the currently-configured display columns, keyed by column header
 }
 
-// One row per Doer assigned to a task — a task can have multiple Doers.
-// taskType + taskId identify which Installation/Complaint/SiteVisit this is
-// (mirrors TaskStep's polymorphic pattern). fundAmount is the optional cash
-// advance handed to that Doer for that task at assignment time.
+// One row per Doer assigned to a task in a given cycle — a task can have
+// multiple Doers, and can be re-assigned multiple times over its life (each
+// re-assignment after a COMPLETED status starts a new `cycle`). taskType +
+// taskId identify which Installation/Complaint/SiteVisit this is (mirrors
+// TaskStep's polymorphic pattern). fundAmount is the optional cash advance
+// handed to that Doer for that task+cycle at assignment time.
 model TaskAssignment {
   id         String   @id @default(uuid())
   taskType   String   // "INSTALLATION" | "COMPLAINT" | "SITE_VISIT"
   taskId     String
   doerId     String
   doer       User     @relation("DoerTaskAssignments", fields: [doerId], references: [id])
+  cycle      Int      @default(1) // which round of this task this assignment belongs to
   fundAmount Float?
   fundNotes  String?
   createdAt  DateTime @default(now())
 
-  @@unique([taskType, taskId, doerId])
+  @@unique([taskType, taskId, doerId, cycle])
 }
 
 // Singleton row (id = "default") storing which Google Sheet columns the
@@ -59,22 +63,24 @@ model SyncConfig {
 }
 
 // Doer's field completion flow, shared by Installation, Complaint, and
-// SiteVisit tasks (taskType + taskId identify which one). One row per task.
-// Installation/Complaint use all 3 steps; SiteVisit only uses steps 1-2
-// (see src/app/api/task-steps/route.ts for the per-taskType rules).
+// SiteVisit tasks (taskType + taskId identify which one). One row per
+// task PER CYCLE — every time a completed task is reopened for another
+// round, a fresh TaskStep row is created for the new `cycle`, and the
+// previous cycle's row is kept as permanent history. All 3 task types now
+// use the same 3-step flow (see src/app/api/task-steps/route.ts):
 //   Step 1: site photo + video, with lat/long captured automatically from
 //           the device at upload time — moves the task to IN_PROGRESS.
 //   Step 2: work-complete evidence upload (Installation/Complaint), or
-//           visit notes + site chart/calculation upload (SiteVisit, which
-//           also completes the task at this step).
+//           visit notes + site chart/calculation upload (SiteVisit).
 //   Step 3: expense amount/notes + uploaded bills — moves the task to
-//           COMPLETED. (Installation/Complaint only.)
+//           COMPLETED for that cycle.
 // Master/Admin/Manager use the Step 1 lat/long to confirm the Doer was
 // actually at the site.
 model TaskStep {
   id            String    @id @default(uuid())
   taskType      String    // "INSTALLATION" | "COMPLAINT" | "SITE_VISIT"
   taskId        String
+  cycle         Int       @default(1) // which round of this task this progress record belongs to
 
   sitePhotoUrl  String?
   siteVideoUrl  String?
@@ -95,7 +101,7 @@ model TaskStep {
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
-  @@unique([taskType, taskId])
+  @@unique([taskType, taskId, cycle])
 }
 
 // Raised internally by Manager/Admin/Master (via the dashboard's Site
@@ -117,6 +123,7 @@ model SiteVisit {
   attendantPhone String?
   visitFor       String    // DOOR | PANEL | DOOR_PANEL
   status         String    @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
+  currentCycle   Int       @default(1) // bumped each time a COMPLETED visit is reopened/reassigned
   createdAt      DateTime  @default(now())
   updatedAt      DateTime  @updatedAt
 }
@@ -137,6 +144,7 @@ model Complaint {
   attachmentUrl      String?    // uploaded invoice/bill document
   mediaUrls          Json?      // uploaded problem photos/videos (array of URLs)
   status             String     @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
+  currentCycle       Int        @default(1) // bumped each time a COMPLETED complaint is reopened/reassigned
   createdAt          DateTime   @default(now())
   updatedAt          DateTime   @updatedAt
 }

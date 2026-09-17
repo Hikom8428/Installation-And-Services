@@ -135,6 +135,18 @@ export default function GuideBookPage() {
         />
       </Section>
 
+      <Section title="Reopening a Completed Task" roles={["MASTER", "ADMIN", "MANAGER"]} userRole={role}>
+        <p>Sometimes a completed Installation, Complaint, or Site Visit needs to go out again — the issue comes back, or a follow-up visit is needed. You don&apos;t need to create a new record for this:</p>
+        <Steps
+          items={[
+            "Open the Completed tab and find the finished case.",
+            "If it's still on its latest round, you'll see a \"Reassign Doer\" button — use it to assign the same or a different Doer.",
+            "The task immediately moves back to the Pending tab as a new round (\"Round 2\", \"Round 3\", etc.) and goes through the same 3-step flow again.",
+          ]}
+        />
+        <p>The earlier round is never overwritten — it stays in the Completed tab forever as its own entry, with its own Fund/Expense/Balance summary, so you always have a full history of every round a case went through.</p>
+      </Section>
+
       <Section title="Manage Users & Roles" roles={["MASTER", "ADMIN", "MANAGER"]} userRole={role}>
         <p>Who can create/edit/delete which accounts:</p>
         <Bullets

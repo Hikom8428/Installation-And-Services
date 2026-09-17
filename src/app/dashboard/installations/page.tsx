@@ -17,6 +17,11 @@ interface Installation {
   assignments: AssignmentInfo[];
   stepSummary: StepSummary | null;
   data?: Record<string, string> | null;
+  // Present only on Completed-tab (history) rows — each is one past round.
+  taskId?: string;
+  cycle?: number;
+  roundLabel?: string;
+  isReopenable?: boolean;
 }
 
 interface Doer {
@@ -26,7 +31,8 @@ interface Doer {
 
 export default function InstallationsDashboard() {
   const { data: session } = useSession();
-  const [installations, setInstallations] = useState<Installation[]>([]);
+  const [pendingInstallations, setPendingInstallations] = useState<Installation[]>([]);
+  const [completedInstallations, setCompletedInstallations] = useState<Installation[]>([]);
   const [doers, setDoers] = useState<Doer[]>([]);
   const [loading, setLoading] = useState(true);
   const [syncing, setSyncing] = useState(false);
@@ -38,7 +44,7 @@ export default function InstallationsDashboard() {
 
   // Modals state
   const [assignModal, setAssignModal] = useState<{ isOpen: boolean; installationId: string }>({ isOpen: false, installationId: "" });
-  const [progressModal, setProgressModal] = useState<{ isOpen: boolean; installationId: string }>({ isOpen: false, installationId: "" });
+  const [progressModal, setProgressModal] = useState<{ isOpen: boolean; installationId: string; cycle?: number; roundLabel?: string }>({ isOpen: false, installationId: "" });
   const [columnModal, setColumnModal] = useState<{ isOpen: boolean; available: string[]; draft: string[]; loading: boolean }>({
     isOpen: false,
     available: [],
@@ -50,7 +56,10 @@ export default function InstallationsDashboard() {
     try {
       const res = await fetch("/api/installations");
       const data = await res.json();
-      if (res.ok) setInstallations(data);
+      if (res.ok) {
+        setPendingInstallations(data.pending || []);
+        setCompletedInstallations(data.completed || []);
+      }
     } catch (error) {
       console.error("Failed to fetch", error);
     } finally {
@@ -162,8 +171,6 @@ export default function InstallationsDashboard() {
   // selection has been fetched (or for Doers, who can't configure columns).
   const displayColumns = selectedColumns.length > 0 ? selectedColumns : ["Client Name", "Order Details"];
 
-  const pendingInstallations = installations.filter((i) => i.status !== "COMPLETED");
-  const completedInstallations = installations.filter((i) => i.status === "COMPLETED");
   const visibleInstallations = activeTab === "COMPLETED" ? completedInstallations : pendingInstallations;
 
   return (
@@ -262,11 +269,25 @@ export default function InstallationsDashboard() {
                     </td>
                     {activeTab === "COMPLETED" && (
                       <td className="px-6 py-4">
-                        <CompletedTaskSummary assignments={inst.assignments} stepSummary={inst.stepSummary} showExpense />
+                        <CompletedTaskSummary assignments={inst.assignments} stepSummary={inst.stepSummary} showExpense roundLabel={inst.roundLabel} />
                       </td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {session?.user.role !== "DOER" ? (
+                      {activeTab === "COMPLETED" ? (
+                        <div className="flex items-center gap-3">
+                          {session?.user.role !== "DOER" && inst.isReopenable && (
+                            <button onClick={() => setAssignModal({ isOpen: true, installationId: inst.taskId || inst.id })} className="text-indigo-600 hover:text-indigo-900">
+                              Reassign Doer
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setProgressModal({ isOpen: true, installationId: inst.taskId || inst.id, cycle: inst.cycle, roundLabel: inst.roundLabel })}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            View Progress
+                          </button>
+                        </div>
+                      ) : session?.user.role !== "DOER" ? (
                         <div className="flex items-center gap-3">
                           <button onClick={() => setAssignModal({ isOpen: true, installationId: inst.id })} className="text-indigo-600 hover:text-indigo-900">
                             Assign Doer
@@ -292,7 +313,7 @@ export default function InstallationsDashboard() {
         </div>
       </div>
 
-      {/* Assign Modal */}
+      {/* Assign Modal — reopening a Completed task always starts a fresh (empty) cycle */}
       {assignModal.isOpen && (
         <AssignDoersModal
           taskType="INSTALLATION"
@@ -300,7 +321,7 @@ export default function InstallationsDashboard() {
           isOpen={assignModal.isOpen}
           onClose={() => setAssignModal({ isOpen: false, installationId: "" })}
           doers={doers}
-          currentAssignments={installations.find((i) => i.id === assignModal.installationId)?.assignments || []}
+          currentAssignments={pendingInstallations.find((i) => i.id === assignModal.installationId)?.assignments || []}
           onUpdated={fetchInstallations}
         />
       )}
@@ -312,7 +333,9 @@ export default function InstallationsDashboard() {
           taskId={progressModal.installationId}
           isOpen={progressModal.isOpen}
           onClose={() => setProgressModal({ isOpen: false, installationId: "" })}
-          mode={session?.user.role === "DOER" ? "doer" : "view"}
+          mode={activeTab === "COMPLETED" ? "view" : session?.user.role === "DOER" ? "doer" : "view"}
+          cycle={progressModal.cycle}
+          roundLabel={progressModal.roundLabel}
           onUpdated={fetchInstallations}
         />
       )}

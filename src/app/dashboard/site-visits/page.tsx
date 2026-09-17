@@ -30,6 +30,11 @@ interface SiteVisit {
   raisedBy?: { name: string } | null;
   raisedVia?: string | null;
   raisedByName?: string | null;
+  // Present only on Completed-tab (history) rows — each is one past round.
+  taskId?: string;
+  cycle?: number;
+  roundLabel?: string;
+  isReopenable?: boolean;
 }
 
 interface Doer {
@@ -53,7 +58,8 @@ const visitForLabel = (v: string) => (v === "DOOR_PANEL" ? "Door + Panel" : v.ch
 
 export default function SiteVisitsDashboard() {
   const { data: session } = useSession();
-  const [visits, setVisits] = useState<SiteVisit[]>([]);
+  const [pendingVisits, setPendingVisits] = useState<SiteVisit[]>([]);
+  const [completedVisits, setCompletedVisits] = useState<SiteVisit[]>([]);
   const [doers, setDoers] = useState<Doer[]>([]);
   const [loading, setLoading] = useState(true);
   const [message, setMessage] = useState("");
@@ -64,7 +70,7 @@ export default function SiteVisitsDashboard() {
   const [saving, setSaving] = useState(false);
 
   const [assignModal, setAssignModal] = useState<{ isOpen: boolean; visitId: string }>({ isOpen: false, visitId: "" });
-  const [progressModal, setProgressModal] = useState<{ isOpen: boolean; visitId: string }>({ isOpen: false, visitId: "" });
+  const [progressModal, setProgressModal] = useState<{ isOpen: boolean; visitId: string; cycle?: number; roundLabel?: string }>({ isOpen: false, visitId: "" });
   const [activeTab, setActiveTab] = useState<"PENDING" | "COMPLETED">("PENDING");
 
   const isStaff = session?.user.role === "MASTER" || session?.user.role === "ADMIN" || session?.user.role === "MANAGER";
@@ -73,7 +79,10 @@ export default function SiteVisitsDashboard() {
     try {
       const res = await fetch("/api/site-visits");
       const data = await res.json();
-      if (res.ok) setVisits(data);
+      if (res.ok) {
+        setPendingVisits(data.pending || []);
+        setCompletedVisits(data.completed || []);
+      }
     } catch (error) {
       console.error("Failed to fetch site visits", error);
     } finally {
@@ -142,8 +151,6 @@ export default function SiteVisitsDashboard() {
 
   if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
-  const pendingVisits = visits.filter((v) => v.status !== "COMPLETED");
-  const completedVisits = visits.filter((v) => v.status === "COMPLETED");
   const visibleVisits = activeTab === "COMPLETED" ? completedVisits : pendingVisits;
 
   return (
@@ -250,11 +257,25 @@ export default function SiteVisitsDashboard() {
                     </td>
                     {activeTab === "COMPLETED" && (
                       <td className="px-6 py-4">
-                        <CompletedTaskSummary assignments={v.assignments} stepSummary={v.stepSummary} showExpense />
+                        <CompletedTaskSummary assignments={v.assignments} stepSummary={v.stepSummary} showExpense roundLabel={v.roundLabel} />
                       </td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                      {isStaff ? (
+                      {activeTab === "COMPLETED" ? (
+                        <div className="flex items-center gap-3">
+                          {isStaff && v.isReopenable && (
+                            <button onClick={() => setAssignModal({ isOpen: true, visitId: v.taskId || v.id })} className="text-indigo-600 hover:text-indigo-900">
+                              Reassign Doer
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setProgressModal({ isOpen: true, visitId: v.taskId || v.id, cycle: v.cycle, roundLabel: v.roundLabel })}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            View Progress
+                          </button>
+                        </div>
+                      ) : isStaff ? (
                         <div className="flex items-center gap-3">
                           <button onClick={() => setAssignModal({ isOpen: true, visitId: v.id })} className="text-indigo-600 hover:text-indigo-900">
                             Assign Doer
@@ -367,7 +388,7 @@ export default function SiteVisitsDashboard() {
         </div>
       )}
 
-      {/* Assign Modal */}
+      {/* Assign Modal — reopening a Completed visit always starts a fresh (empty) cycle */}
       {assignModal.isOpen && (
         <AssignDoersModal
           taskType="SITE_VISIT"
@@ -375,7 +396,7 @@ export default function SiteVisitsDashboard() {
           isOpen={assignModal.isOpen}
           onClose={() => setAssignModal({ isOpen: false, visitId: "" })}
           doers={doers}
-          currentAssignments={visits.find((v) => v.id === assignModal.visitId)?.assignments || []}
+          currentAssignments={pendingVisits.find((v) => v.id === assignModal.visitId)?.assignments || []}
           onUpdated={fetchVisits}
         />
       )}
@@ -387,7 +408,9 @@ export default function SiteVisitsDashboard() {
           taskId={progressModal.visitId}
           isOpen={progressModal.isOpen}
           onClose={() => setProgressModal({ isOpen: false, visitId: "" })}
-          mode={session?.user.role === "DOER" ? "doer" : "view"}
+          mode={activeTab === "COMPLETED" ? "view" : session?.user.role === "DOER" ? "doer" : "view"}
+          cycle={progressModal.cycle}
+          roundLabel={progressModal.roundLabel}
           onUpdated={fetchVisits}
         />
       )}
