@@ -40,7 +40,8 @@ export default function ManageUsersPage() {
 
   const isMaster = session?.user?.role === "MASTER";
   const isAdmin = session?.user?.role === "ADMIN";
-  const canManageUsers = isMaster || isAdmin;
+  const isManager = session?.user?.role === "MANAGER";
+  const canManageUsers = isMaster || isAdmin || isManager;
 
   const fetchUsers = async () => {
     try {
@@ -59,8 +60,10 @@ export default function ManageUsersPage() {
     else setLoading(false);
   }, [session]);
 
-  // ADMIN cannot manage MASTER/ADMIN accounts (mirrors the server-side rule)
-  const canEditTarget = (u: UserRow) => isMaster || (isAdmin && (u.role === "MANAGER" || u.role === "DOER"));
+  // ADMIN cannot manage MASTER/ADMIN accounts, MANAGER can only manage DOER
+  // accounts (mirrors the server-side rules)
+  const canEditTarget = (u: UserRow) =>
+    isMaster || (isAdmin && (u.role === "MANAGER" || u.role === "DOER")) || (isManager && u.role === "DOER");
 
   const openCreateModal = () => {
     setFormData(emptyForm);
@@ -131,7 +134,7 @@ export default function ManageUsersPage() {
   };
 
   if (!canManageUsers) {
-    return <div className="p-4 text-red-500">Access Denied. Only Master and Admin can manage users.</div>;
+    return <div className="p-4 text-red-500">Access Denied. Only Master, Admin, and Manager can manage users.</div>;
   }
 
   if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
@@ -141,7 +144,9 @@ export default function ManageUsersPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Manage Users</h1>
-          <p className="text-sm text-slate-500 mt-1">Create, edit, or remove Manager and Doer accounts</p>
+          <p className="text-sm text-slate-500 mt-1">
+            {isManager ? "Create, edit, or remove Doer accounts" : "Create, edit, or remove Manager and Doer accounts"}
+          </p>
         </div>
         <button
           onClick={openCreateModal}
@@ -263,7 +268,7 @@ export default function ManageUsersPage() {
                   onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                 >
                   <option value="DOER">Doer (Technician)</option>
-                  <option value="MANAGER">Manager</option>
+                  {!isManager && <option value="MANAGER">Manager</option>}
                   {isMaster && <option value="ADMIN">Admin</option>}
                 </select>
               </div>

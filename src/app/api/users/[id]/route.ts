@@ -4,12 +4,18 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+function isStaff(role: string) {
+  return role === "MASTER" || role === "ADMIN" || role === "MANAGER";
+}
+
 // Can the acting user manage (edit/delete) the target user?
-// MASTER can manage anyone. ADMIN can only manage MANAGER/DOER accounts
-// (mirrors the "only MASTER can create ADMIN" rule on creation).
+// MASTER can manage anyone. ADMIN can manage MANAGER/DOER accounts (mirrors
+// the "only MASTER can create ADMIN" rule on creation). MANAGER can only
+// manage DOER accounts.
 function canManage(actingRole: string, targetRole: string) {
   if (actingRole === "MASTER") return true;
   if (actingRole === "ADMIN") return targetRole === "MANAGER" || targetRole === "DOER";
+  if (actingRole === "MANAGER") return targetRole === "DOER";
   return false;
 }
 
@@ -19,7 +25,7 @@ export async function PATCH(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== "MASTER" && session.user.role !== "ADMIN")) {
+    if (!session || !isStaff(session.user.role)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -37,6 +43,10 @@ export async function PATCH(
 
     if (role === "ADMIN" && session.user.role !== "MASTER") {
       return NextResponse.json({ message: "Only Master can assign the Admin role" }, { status: 403 });
+    }
+
+    if (role && role !== "DOER" && session.user.role === "MANAGER") {
+      return NextResponse.json({ message: "Managers can only manage Doer accounts" }, { status: 403 });
     }
 
     if (email && email !== target.email) {
@@ -71,7 +81,7 @@ export async function DELETE(
 ) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== "MASTER" && session.user.role !== "ADMIN")) {
+    if (!session || !isStaff(session.user.role)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 

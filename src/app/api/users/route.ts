@@ -4,11 +4,15 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+function isStaff(role: string) {
+  return role === "MASTER" || role === "ADMIN" || role === "MANAGER";
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || (session.user.role !== "MASTER" && session.user.role !== "ADMIN")) {
+    if (!session || !isStaff(session.user.role)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -28,7 +32,7 @@ export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
 
-    if (!session || (session.user.role !== "MASTER" && session.user.role !== "ADMIN")) {
+    if (!session || !isStaff(session.user.role)) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
@@ -41,6 +45,11 @@ export async function POST(req: Request) {
     // Only MASTER can create ADMIN
     if (role === "ADMIN" && session.user.role !== "MASTER") {
       return NextResponse.json({ message: "Only Master can create Admins" }, { status: 403 });
+    }
+
+    // MANAGER can only create DOER accounts
+    if (session.user.role === "MANAGER" && role !== "DOER") {
+      return NextResponse.json({ message: "Managers can only create Doer accounts" }, { status: 403 });
     }
 
     const existingUser = await prisma.user.findUnique({

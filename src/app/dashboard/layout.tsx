@@ -45,7 +45,7 @@ export default function DashboardLayout({
     { name: "Installations", href: "/dashboard/installations", icon: FileText, show: true },
     { name: "Complaints", href: "/dashboard/complaints", icon: ClipboardList, show: true },
     { name: "Site Visits", href: "/dashboard/site-visits", icon: MapPin, show: true },
-    { name: "Manage Users", href: "/dashboard/users/new", icon: Users, show: session.user.role === "MASTER" || session.user.role === "ADMIN" },
+    { name: "Manage Users", href: "/dashboard/users/new", icon: Users, show: session.user.role === "MASTER" || session.user.role === "ADMIN" || session.user.role === "MANAGER" },
   ];
 
   return (
