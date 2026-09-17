@@ -43,6 +43,40 @@ model SyncConfig {
   updatedAt DateTime @updatedAt
 }
 
+// Doer's 3-step field completion flow, shared by Installation and Complaint
+// tasks (taskType + taskId identify which one). One row per task.
+//   Step 1: site photo + video, with lat/long captured automatically from
+//           the device at upload time — moves the task to IN_PROGRESS.
+//   Step 2: work-complete evidence upload.
+//   Step 3: expense amount/notes + uploaded bills — moves the task to
+//           COMPLETED.
+// Master/Admin/Manager use the Step 1 lat/long to confirm the Doer was
+// actually at the site.
+model TaskStep {
+  id            String    @id @default(uuid())
+  taskType      String    // "INSTALLATION" | "COMPLAINT"
+  taskId        String
+
+  sitePhotoUrl  String?
+  siteVideoUrl  String?
+  latitude      Float?
+  longitude     Float?
+  step1At       DateTime?
+
+  evidenceUrl   String?
+  step2At       DateTime?
+
+  expenseAmount Float?
+  expenseNotes  String?
+  billUrls      Json?     // array of uploaded bill file URLs
+  step3At       DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([taskType, taskId])
+}
+
 model Complaint {
   id               String     @id @default(uuid())
   jobNo            String?

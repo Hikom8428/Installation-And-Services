@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
+import TaskProgressModal from "@/components/TaskProgressModal";
 
 interface Complaint {
   id: string;
@@ -29,7 +30,7 @@ export default function ComplaintsDashboard() {
   
   // Modals state
   const [assignModal, setAssignModal] = useState<{ isOpen: boolean; complaintId: string }>({ isOpen: false, complaintId: "" });
-  const [statusModal, setStatusModal] = useState<{ isOpen: boolean; complaintId: string }>({ isOpen: false, complaintId: "" });
+  const [progressModal, setProgressModal] = useState<{ isOpen: boolean; complaintId: string }>({ isOpen: false, complaintId: "" });
 
   const fetchComplaints = async () => {
     try {
@@ -75,22 +76,6 @@ export default function ComplaintsDashboard() {
       }
     } catch (error) {
       console.error("Assign error", error);
-    }
-  };
-
-  const handleStatusUpdate = async (status: string) => {
-    try {
-      const res = await fetch(`/api/complaints/${statusModal.complaintId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (res.ok) {
-        setStatusModal({ isOpen: false, complaintId: "" });
-        fetchComplaints(); // refresh
-      }
-    } catch (error) {
-      console.error("Status update error", error);
     }
   };
 
@@ -172,9 +157,14 @@ export default function ComplaintsDashboard() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     {session?.user.role !== "DOER" ? (
-                       <button onClick={() => setAssignModal({ isOpen: true, complaintId: complaint.id })} className="text-indigo-600 hover:text-indigo-900 mr-3">Assign Doer</button>
+                      <div className="flex items-center gap-3">
+                        <button onClick={() => setAssignModal({ isOpen: true, complaintId: complaint.id })} className="text-indigo-600 hover:text-indigo-900">Assign Doer</button>
+                        {complaint.assignedDoer && (
+                          <button onClick={() => setProgressModal({ isOpen: true, complaintId: complaint.id })} className="text-blue-600 hover:text-blue-900">View Progress</button>
+                        )}
+                      </div>
                     ) : (
-                       <button onClick={() => setStatusModal({ isOpen: true, complaintId: complaint.id })} className="text-green-600 hover:text-green-900">Update Status</button>
+                       <button onClick={() => setProgressModal({ isOpen: true, complaintId: complaint.id })} className="text-green-600 hover:text-green-900">Update Progress</button>
                     )}
                   </td>
                 </tr>
@@ -198,18 +188,16 @@ export default function ComplaintsDashboard() {
         </div>
       )}
 
-      {/* Status Modal */}
-      {statusModal.isOpen && (
-        <div className="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full flex items-center justify-center">
-          <div className="bg-white p-6 rounded-md shadow-lg w-96">
-            <h3 className="text-lg font-bold mb-4">Update Status</h3>
-            <div className="space-y-2 mb-4">
-              <button onClick={() => handleStatusUpdate("IN_PROGRESS")} className="w-full bg-purple-100 text-purple-800 p-2 rounded hover:bg-purple-200">Mark In Progress</button>
-              <button onClick={() => handleStatusUpdate("COMPLETED")} className="w-full bg-green-100 text-green-800 p-2 rounded hover:bg-green-200">Mark Completed</button>
-            </div>
-            <button onClick={() => setStatusModal({ isOpen: false, complaintId: "" })} className="w-full bg-gray-200 text-gray-800 p-2 rounded">Cancel</button>
-          </div>
-        </div>
+      {/* Task Progress Modal (Doer fills steps; Manager/Admin/Master view them) */}
+      {progressModal.isOpen && (
+        <TaskProgressModal
+          taskType="COMPLAINT"
+          taskId={progressModal.complaintId}
+          isOpen={progressModal.isOpen}
+          onClose={() => setProgressModal({ isOpen: false, complaintId: "" })}
+          mode={session?.user.role === "DOER" ? "doer" : "view"}
+          onUpdated={fetchComplaints}
+        />
       )}
     </div>
   );

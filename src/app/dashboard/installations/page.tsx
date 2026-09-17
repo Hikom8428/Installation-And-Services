@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { RefreshCw, Settings } from "lucide-react";
+import TaskProgressModal from "@/components/TaskProgressModal";
 
 interface Installation {
   id: string;
@@ -32,7 +33,7 @@ export default function InstallationsDashboard() {
 
   // Modals state
   const [assignModal, setAssignModal] = useState<{ isOpen: boolean; installationId: string }>({ isOpen: false, installationId: "" });
-  const [statusModal, setStatusModal] = useState<{ isOpen: boolean; installationId: string }>({ isOpen: false, installationId: "" });
+  const [progressModal, setProgressModal] = useState<{ isOpen: boolean; installationId: string }>({ isOpen: false, installationId: "" });
   const [columnModal, setColumnModal] = useState<{ isOpen: boolean; available: string[]; draft: string[]; loading: boolean }>({
     isOpen: false,
     available: [],
@@ -167,22 +168,6 @@ export default function InstallationsDashboard() {
     }
   };
 
-  const handleStatusUpdate = async (status: string) => {
-    try {
-      const res = await fetch(`/api/installations/${statusModal.installationId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ status }),
-      });
-      if (res.ok) {
-        setStatusModal({ isOpen: false, installationId: "" });
-        fetchInstallations(); // refresh
-      }
-    } catch (error) {
-      console.error("Status update error", error);
-    }
-  };
-
   if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
   // Fall back to the fixed Client Name / Product Details columns until a
@@ -274,13 +259,20 @@ export default function InstallationsDashboard() {
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {session?.user.role !== "DOER" ? (
-                        <button onClick={() => setAssignModal({ isOpen: true, installationId: inst.id })} className="text-indigo-600 hover:text-indigo-900">
-                          Assign Doer
-                        </button>
+                        <div className="flex items-center gap-3">
+                          <button onClick={() => setAssignModal({ isOpen: true, installationId: inst.id })} className="text-indigo-600 hover:text-indigo-900">
+                            Assign Doer
+                          </button>
+                          {inst.assignedDoer && (
+                            <button onClick={() => setProgressModal({ isOpen: true, installationId: inst.id })} className="text-blue-600 hover:text-blue-900">
+                              View Progress
+                            </button>
+                          )}
+                        </div>
                       ) : (
                         inst.assignedDoer && (
-                          <button onClick={() => setStatusModal({ isOpen: true, installationId: inst.id })} className="text-green-600 hover:text-green-900">
-                            Update Status
+                          <button onClick={() => setProgressModal({ isOpen: true, installationId: inst.id })} className="text-green-600 hover:text-green-900">
+                            Update Progress
                           </button>
                         )
                       )}
@@ -316,27 +308,16 @@ export default function InstallationsDashboard() {
         </div>
       )}
 
-      {/* Status Modal */}
-      {statusModal.isOpen && (
-        <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50">
-          <div className="bg-white p-6 rounded-xl shadow-lg w-96">
-            <h3 className="text-lg font-bold mb-4 text-slate-900">Update Status</h3>
-            <div className="space-y-2 mb-4">
-              <button onClick={() => handleStatusUpdate("IN_PROGRESS")} className="w-full bg-purple-100 text-purple-800 p-2.5 rounded-lg text-sm font-medium hover:bg-purple-200">
-                Mark In Progress
-              </button>
-              <button onClick={() => handleStatusUpdate("COMPLETED")} className="w-full bg-green-100 text-green-800 p-2.5 rounded-lg text-sm font-medium hover:bg-green-200">
-                Mark Completed
-              </button>
-            </div>
-            <button
-              onClick={() => setStatusModal({ isOpen: false, installationId: "" })}
-              className="w-full bg-slate-100 text-slate-700 p-2.5 rounded-lg text-sm font-medium hover:bg-slate-200"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
+      {/* Task Progress Modal (Doer fills steps; Manager/Admin/Master view them) */}
+      {progressModal.isOpen && (
+        <TaskProgressModal
+          taskType="INSTALLATION"
+          taskId={progressModal.installationId}
+          isOpen={progressModal.isOpen}
+          onClose={() => setProgressModal({ isOpen: false, installationId: "" })}
+          mode={session?.user.role === "DOER" ? "doer" : "view"}
+          onUpdated={fetchInstallations}
+        />
       )}
 
       {/* Configure Columns Modal */}

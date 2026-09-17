@@ -56,6 +56,29 @@ CREATE TABLE `SyncConfig` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
+CREATE TABLE `TaskStep` (
+    `id` VARCHAR(191) NOT NULL,
+    `taskType` VARCHAR(191) NOT NULL,
+    `taskId` VARCHAR(191) NOT NULL,
+    `sitePhotoUrl` VARCHAR(191) NULL,
+    `siteVideoUrl` VARCHAR(191) NULL,
+    `latitude` DOUBLE NULL,
+    `longitude` DOUBLE NULL,
+    `step1At` DATETIME(3) NULL,
+    `evidenceUrl` VARCHAR(191) NULL,
+    `step2At` DATETIME(3) NULL,
+    `expenseAmount` DOUBLE NULL,
+    `expenseNotes` VARCHAR(191) NULL,
+    `billUrls` JSON NULL,
+    `step3At` DATETIME(3) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
+
+    UNIQUE INDEX `TaskStep_taskType_taskId_key`(`taskType`, `taskId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+-- CreateTable
 CREATE TABLE `Complaint` (
     `id` VARCHAR(191) NOT NULL,
     `jobNo` VARCHAR(191) NULL,
