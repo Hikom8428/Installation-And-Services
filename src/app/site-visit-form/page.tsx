@@ -14,7 +14,11 @@ const emptyForm = {
   attendantName: "",
   attendantPhone: "",
   visitFor: "DOOR",
+  raisedVia: "",
+  raisedByName: "",
 };
+
+const RAISED_VIA_OPTIONS = ["Phone Call", "WhatsApp", "Email", "In Person", "Other"];
 
 export default function SiteVisitFormPage() {
   const [formData, setFormData] = useState(emptyForm);
@@ -83,6 +87,30 @@ export default function SiteVisitFormPage() {
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
               value={formData.customerName}
               onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">How are you raising this request?</label>
+            <select
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+              value={formData.raisedVia}
+              onChange={(e) => setFormData({ ...formData, raisedVia: e.target.value })}
+            >
+              <option value="">Select...</option>
+              {RAISED_VIA_OPTIONS.map((opt) => (
+                <option key={opt} value={opt}>{opt}</option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Your Name (Person Raising this Request)</label>
+            <input
+              type="text"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+              value={formData.raisedByName}
+              onChange={(e) => setFormData({ ...formData, raisedByName: e.target.value })}
             />
           </div>
 

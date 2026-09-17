@@ -102,6 +102,8 @@ CREATE TABLE `SiteVisit` (
     `id` VARCHAR(191) NOT NULL,
     `serialNo` INTEGER NOT NULL AUTO_INCREMENT,
     `raisedById` VARCHAR(191) NULL,
+    `raisedVia` VARCHAR(191) NULL,
+    `raisedByName` VARCHAR(191) NULL,
     `customerName` VARCHAR(191) NOT NULL,
     `siteAddress` VARCHAR(191) NULL,
     `siteLatitude` DOUBLE NULL,

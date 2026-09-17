@@ -107,6 +107,8 @@ model SiteVisit {
   serialNo       Int       @unique @default(autoincrement())
   raisedById     String?
   raisedBy       User?     @relation("RaisedSiteVisits", fields: [raisedById], references: [id])
+  raisedVia      String?   // how the request came in — Phone Call, WhatsApp, Email, In Person, Other
+  raisedByName   String?   // name of the person who requested the visit
   customerName   String
   siteAddress    String?
   siteLatitude   Float?    // picked on the map when raising the visit

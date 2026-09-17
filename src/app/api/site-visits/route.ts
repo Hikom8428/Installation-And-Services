@@ -21,6 +21,8 @@ export async function POST(req: Request) {
     const visitFor = body.visitFor;
     const siteLatitude = typeof body.siteLatitude === "number" ? body.siteLatitude : null;
     const siteLongitude = typeof body.siteLongitude === "number" ? body.siteLongitude : null;
+    const raisedVia = (body.raisedVia || "").trim() || null;
+    const raisedByName = (body.raisedByName || "").trim() || null;
 
     if (!customerName || !VALID_VISIT_FOR.includes(visitFor)) {
       return NextResponse.json({ message: "Customer Name and a valid Visit For are required" }, { status: 400 });
@@ -29,6 +31,8 @@ export async function POST(req: Request) {
     const siteVisit = await prisma.siteVisit.create({
       data: {
         raisedById: session?.user.id || null,
+        raisedVia,
+        raisedByName,
         customerName,
         siteAddress,
         siteLatitude,

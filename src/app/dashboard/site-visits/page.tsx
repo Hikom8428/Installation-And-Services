@@ -28,6 +28,8 @@ interface SiteVisit {
   assignments: AssignmentInfo[];
   stepSummary: StepSummary | null;
   raisedBy?: { name: string } | null;
+  raisedVia?: string | null;
+  raisedByName?: string | null;
 }
 
 interface Doer {
@@ -41,7 +43,11 @@ const emptyForm = {
   attendantName: "",
   attendantPhone: "",
   visitFor: "DOOR",
+  raisedVia: "",
+  raisedByName: "",
 };
+
+const RAISED_VIA_OPTIONS = ["Phone Call", "WhatsApp", "Email", "In Person", "Other"];
 
 const visitForLabel = (v: string) => (v === "DOOR_PANEL" ? "Door + Panel" : v.charAt(0) + v.slice(1).toLowerCase());
 
@@ -179,6 +185,7 @@ export default function SiteVisitsDashboard() {
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Serial No</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Requested By</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Visit For</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Site</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
@@ -192,7 +199,7 @@ export default function SiteVisitsDashboard() {
             <tbody className="divide-y divide-slate-200 bg-white">
               {visibleVisits.length === 0 ? (
                 <tr>
-                  <td colSpan={activeTab === "COMPLETED" ? 8 : 7} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={activeTab === "COMPLETED" ? 9 : 8} className="px-6 py-8 text-center text-slate-500">
                     {activeTab === "COMPLETED" ? "No completed site visits yet." : "No pending site visits found."}
                   </td>
                 </tr>
@@ -203,6 +210,18 @@ export default function SiteVisitsDashboard() {
                       SV-{String(v.serialNo).padStart(4, "0")}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{v.customerName}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
+                      {v.raisedByName ? (
+                        <>
+                          <div>{v.raisedByName}</div>
+                          {v.raisedVia && <div className="text-xs text-slate-400">via {v.raisedVia}</div>}
+                        </>
+                      ) : v.raisedVia ? (
+                        <div className="text-xs text-slate-400">via {v.raisedVia}</div>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{visitForLabel(v.visitFor)}</td>
                     <td className="px-6 py-4 text-sm text-slate-600 max-w-[12rem]">
                       {v.siteAddress && <div className="truncate">{v.siteAddress}</div>}
@@ -272,6 +291,27 @@ export default function SiteVisitsDashboard() {
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900"
                   value={formData.customerName}
                   onChange={(e) => setFormData({ ...formData, customerName: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Site Visit Raised Via</label>
+                <select
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900"
+                  value={formData.raisedVia}
+                  onChange={(e) => setFormData({ ...formData, raisedVia: e.target.value })}
+                >
+                  <option value="">Select...</option>
+                  {RAISED_VIA_OPTIONS.map((opt) => (
+                    <option key={opt} value={opt}>{opt}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Raised By (Person Name)</label>
+                <input type="text"
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900"
+                  placeholder="Who requested this site visit"
+                  value={formData.raisedByName}
+                  onChange={(e) => setFormData({ ...formData, raisedByName: e.target.value })} />
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Site Address</label>

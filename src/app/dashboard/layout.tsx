@@ -4,7 +4,7 @@ import { useSession, signOut } from "next-auth/react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { LayoutDashboard, Users, FileText, ClipboardList, LogOut, Wrench, Menu, MapPin, X } from "lucide-react";
+import { LayoutDashboard, Users, FileText, ClipboardList, LogOut, Wrench, Menu, MapPin, X, BookOpen } from "lucide-react";
 import PushNotificationSetup from "@/components/PushNotificationSetup";
 
 export default function DashboardLayout({
@@ -46,6 +46,7 @@ export default function DashboardLayout({
     { name: "Complaints", href: "/dashboard/complaints", icon: ClipboardList, show: true },
     { name: "Site Visits", href: "/dashboard/site-visits", icon: MapPin, show: true },
     { name: "Manage Users", href: "/dashboard/users/new", icon: Users, show: session.user.role === "MASTER" || session.user.role === "ADMIN" || session.user.role === "MANAGER" },
+    { name: "Guide Book", href: "/dashboard/guide", icon: BookOpen, show: true },
   ];
 
   return (
