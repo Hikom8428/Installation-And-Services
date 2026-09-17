@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAssignedTaskIds, attachAssignments } from "@/lib/taskAssignments";
+import { getAssignedTaskIds, attachAssignments, attachStepSummary } from "@/lib/taskAssignments";
 
 const VALID_VISIT_FOR = ["DOOR", "PANEL", "DOOR_PANEL"];
 
@@ -75,8 +75,9 @@ export async function GET() {
     }
 
     const withAssignments = await attachAssignments("SITE_VISIT", siteVisits);
+    const withSteps = await attachStepSummary("SITE_VISIT", withAssignments);
 
-    return NextResponse.json(withAssignments, { status: 200 });
+    return NextResponse.json(withSteps, { status: 200 });
   } catch (error) {
     console.error("Error fetching site visits:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

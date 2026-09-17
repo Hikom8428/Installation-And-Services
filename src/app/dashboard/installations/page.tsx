@@ -6,6 +6,7 @@ import { RefreshCw, Settings } from "lucide-react";
 import TaskProgressModal from "@/components/TaskProgressModal";
 import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal";
 import StatusTabs from "@/components/StatusTabs";
+import CompletedTaskSummary, { StepSummary } from "@/components/CompletedTaskSummary";
 
 interface Installation {
   id: string;
@@ -14,6 +15,7 @@ interface Installation {
   status: string;
   syncDate: string;
   assignments: AssignmentInfo[];
+  stepSummary: StepSummary | null;
   data?: Record<string, string> | null;
 }
 
@@ -219,13 +221,16 @@ export default function InstallationsDashboard() {
                 ))}
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned To</th>
+                {activeTab === "COMPLETED" && (
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Summary</th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
               {visibleInstallations.length === 0 ? (
                 <tr>
-                  <td colSpan={displayColumns.length + 3} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={displayColumns.length + (activeTab === "COMPLETED" ? 4 : 3)} className="px-6 py-8 text-center text-slate-500">
                     {activeTab === "COMPLETED" ? "No completed installations yet." : "No pending installations found. Click Sync to pull data from Google Sheets."}
                   </td>
                 </tr>
@@ -255,6 +260,11 @@ export default function InstallationsDashboard() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                       {inst.assignments.length > 0 ? inst.assignments.map((a) => a.doerName).join(", ") : "Unassigned"}
                     </td>
+                    {activeTab === "COMPLETED" && (
+                      <td className="px-6 py-4">
+                        <CompletedTaskSummary assignments={inst.assignments} stepSummary={inst.stepSummary} showExpense />
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {session?.user.role !== "DOER" ? (
                         <div className="flex items-center gap-3">

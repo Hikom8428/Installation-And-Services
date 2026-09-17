@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAssignedTaskIds, attachAssignments } from "@/lib/taskAssignments";
+import { getAssignedTaskIds, attachAssignments, attachStepSummary } from "@/lib/taskAssignments";
 import { randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
@@ -148,8 +148,9 @@ export async function GET(req: Request) {
     }
 
     const withAssignments = await attachAssignments("COMPLAINT", complaints);
+    const withSteps = await attachStepSummary("COMPLAINT", withAssignments);
 
-    return NextResponse.json(withAssignments, { status: 200 });
+    return NextResponse.json(withSteps, { status: 200 });
   } catch (error) {
     console.error("Error fetching complaints:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

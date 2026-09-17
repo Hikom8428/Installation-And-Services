@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import TaskProgressModal from "@/components/TaskProgressModal";
 import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal";
 import StatusTabs from "@/components/StatusTabs";
+import CompletedTaskSummary, { StepSummary } from "@/components/CompletedTaskSummary";
 
 interface Complaint {
   id: string;
@@ -24,6 +25,7 @@ interface Complaint {
   status: string;
   createdAt: string;
   assignments: AssignmentInfo[];
+  stepSummary: StepSummary | null;
 }
 
 interface Doer {
@@ -122,13 +124,16 @@ export default function ComplaintsDashboard() {
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Media</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned To</th>
+              {activeTab === "COMPLETED" && (
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Summary</th>
+              )}
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
             {visibleComplaints.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-8 text-center text-slate-500">
+                <td colSpan={activeTab === "COMPLETED" ? 10 : 9} className="px-6 py-8 text-center text-slate-500">
                   {activeTab === "COMPLETED" ? "No completed complaints yet." : "No pending complaints found."}
                 </td>
               </tr>
@@ -193,6 +198,11 @@ export default function ComplaintsDashboard() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                     {complaint.assignments.length > 0 ? complaint.assignments.map((a) => a.doerName).join(", ") : "Unassigned"}
                   </td>
+                  {activeTab === "COMPLETED" && (
+                    <td className="px-6 py-4">
+                      <CompletedTaskSummary assignments={complaint.assignments} stepSummary={complaint.stepSummary} showExpense />
+                    </td>
+                  )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                     {session?.user.role !== "DOER" ? (
                       <div className="flex items-center gap-3">

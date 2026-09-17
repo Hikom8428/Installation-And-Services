@@ -51,6 +51,48 @@ export async function attachAssignments<T extends { id: string }>(
   return tasks.map((t) => ({ ...t, assignments: byTaskId.get(t.id) || [] }));
 }
 
+export interface StepSummary {
+  step1At: Date | null;
+  step2At: Date | null;
+  step3At: Date | null;
+  daysStep1To2: number | null;
+  expenseAmount: number | null;
+  billUrls: string[];
+}
+
+// Attaches a `stepSummary` (progress timestamps + expense/bill info from the
+// last step) to each task, for the Completed-tab summary — same shared-table
+// join pattern as attachAssignments, against TaskStep instead.
+export async function attachStepSummary<T extends { id: string }>(
+  taskType: TaskType,
+  tasks: T[]
+): Promise<(T & { stepSummary: StepSummary | null })[]> {
+  if (tasks.length === 0) return [];
+
+  const taskIds = tasks.map((t) => t.id);
+  const rows = await prisma.taskStep.findMany({
+    where: { taskType, taskId: { in: taskIds } },
+  });
+
+  const byTaskId = new Map<string, StepSummary>();
+  for (const row of rows) {
+    const daysStep1To2 =
+      row.step1At && row.step2At
+        ? Math.round(((row.step2At.getTime() - row.step1At.getTime()) / (1000 * 60 * 60 * 24)) * 10) / 10
+        : null;
+    byTaskId.set(row.taskId, {
+      step1At: row.step1At,
+      step2At: row.step2At,
+      step3At: row.step3At,
+      daysStep1To2,
+      expenseAmount: row.expenseAmount,
+      billUrls: Array.isArray(row.billUrls) ? (row.billUrls as string[]) : [],
+    });
+  }
+
+  return tasks.map((t) => ({ ...t, stepSummary: byTaskId.get(t.id) || null }));
+}
+
 export async function isTaskAssignedToDoer(taskType: TaskType, taskId: string, doerId: string): Promise<boolean> {
   const row = await prisma.taskAssignment.findUnique({
     where: { taskType_taskId_doerId: { taskType, taskId, doerId } },

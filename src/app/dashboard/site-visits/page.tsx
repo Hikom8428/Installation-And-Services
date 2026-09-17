@@ -7,6 +7,7 @@ import { Plus } from "lucide-react";
 import TaskProgressModal from "@/components/TaskProgressModal";
 import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal";
 import StatusTabs from "@/components/StatusTabs";
+import CompletedTaskSummary, { StepSummary } from "@/components/CompletedTaskSummary";
 
 const LocationPicker = dynamic(() => import("@/components/LocationPicker"), {
   ssr: false,
@@ -25,6 +26,7 @@ interface SiteVisit {
   visitFor: string;
   status: string;
   assignments: AssignmentInfo[];
+  stepSummary: StepSummary | null;
   raisedBy?: { name: string } | null;
 }
 
@@ -181,13 +183,16 @@ export default function SiteVisitsDashboard() {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Site</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned To</th>
+                {activeTab === "COMPLETED" && (
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Summary</th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
               {visibleVisits.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={activeTab === "COMPLETED" ? 8 : 7} className="px-6 py-8 text-center text-slate-500">
                     {activeTab === "COMPLETED" ? "No completed site visits yet." : "No pending site visits found."}
                   </td>
                 </tr>
@@ -224,6 +229,11 @@ export default function SiteVisitsDashboard() {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                       {v.assignments.length > 0 ? v.assignments.map((a) => a.doerName).join(", ") : "Unassigned"}
                     </td>
+                    {activeTab === "COMPLETED" && (
+                      <td className="px-6 py-4">
+                        <CompletedTaskSummary assignments={v.assignments} stepSummary={v.stepSummary} showExpense={false} />
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
                       {isStaff ? (
                         <div className="flex items-center gap-3">

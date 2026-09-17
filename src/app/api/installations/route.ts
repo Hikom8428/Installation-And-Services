@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { getAssignedTaskIds, attachAssignments } from "@/lib/taskAssignments";
+import { getAssignedTaskIds, attachAssignments, attachStepSummary } from "@/lib/taskAssignments";
 
 export async function GET() {
   try {
@@ -26,8 +26,9 @@ export async function GET() {
     }
 
     const withAssignments = await attachAssignments("INSTALLATION", installations);
+    const withSteps = await attachStepSummary("INSTALLATION", withAssignments);
 
-    return NextResponse.json(withAssignments, { status: 200 });
+    return NextResponse.json(withSteps, { status: 200 });
   } catch (error) {
     console.error("Error fetching installations:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
