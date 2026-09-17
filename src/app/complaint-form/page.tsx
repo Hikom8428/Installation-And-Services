@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 
+const JOB_NO_PREFIX = "HI-";
+
 const emptyForm = {
-  jobNo: "",
+  jobNoDigits: "",
   customerName: "",
   customerPhone: "",
   customerEmail: "",
@@ -23,7 +25,7 @@ export default function ComplaintFormPage() {
 
     try {
       const body = new FormData();
-      body.append("jobNo", formData.jobNo);
+      body.append("jobNo", `${JOB_NO_PREFIX}${formData.jobNoDigits}`);
       body.append("customerName", formData.customerName);
       body.append("customerPhone", formData.customerPhone);
       body.append("customerEmail", formData.customerEmail);
@@ -68,13 +70,22 @@ export default function ComplaintFormPage() {
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700">Job No</label>
-            <input
-              type="text"
-              required
-              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
-              value={formData.jobNo}
-              onChange={(e) => setFormData({ ...formData, jobNo: e.target.value })}
-            />
+            <div className="mt-1 flex items-stretch border border-gray-300 rounded-md shadow-sm overflow-hidden focus-within:ring-2 focus-within:ring-blue-500 focus-within:border-blue-500">
+              <span className="inline-flex items-center px-3 bg-gray-100 text-gray-600 font-medium text-sm select-none">
+                {JOB_NO_PREFIX}
+              </span>
+              <input
+                type="text"
+                required
+                inputMode="numeric"
+                pattern="[0-9]+"
+                title="Digits only"
+                placeholder="12450"
+                className="block w-full px-3 py-2 border-0 focus:outline-none focus:ring-0 text-black"
+                value={formData.jobNoDigits}
+                onChange={(e) => setFormData({ ...formData, jobNoDigits: e.target.value.replace(/\D/g, "") })}
+              />
+            </div>
           </div>
 
           <div>
