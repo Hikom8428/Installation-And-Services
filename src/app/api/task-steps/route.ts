@@ -6,11 +6,31 @@ import { randomUUID } from "crypto";
 import { mkdir, writeFile } from "fs/promises";
 import path from "path";
 import { isTaskAssignedToDoer } from "@/lib/taskAssignments";
+import { sendPushToUsers } from "@/lib/onesignal-server";
 
 const MAX_IMAGE_BYTES = 8 * 1024 * 1024; // 8MB
 const MAX_VIDEO_BYTES = 30 * 1024 * 1024; // 30MB
 
 type TaskType = "INSTALLATION" | "COMPLAINT" | "SITE_VISIT";
+
+const taskTypeLabel: Record<TaskType, string> = {
+  INSTALLATION: "Installation",
+  COMPLAINT: "Complaint",
+  SITE_VISIT: "Site Visit",
+};
+
+async function notifyStaffOfStepCompletion(taskType: TaskType, stepNumber: number, doerName: string, taskLabel: string) {
+  const staff = await prisma.user.findMany({
+    where: { role: { in: ["MASTER", "ADMIN", "MANAGER"] } },
+    select: { id: true },
+  });
+  if (staff.length === 0) return;
+  await sendPushToUsers({
+    userIds: staff.map((s) => s.id),
+    title: `Step ${stepNumber} completed`,
+    message: `${doerName} completed Step ${stepNumber} for ${taskTypeLabel[taskType]}: ${taskLabel}.`,
+  });
+}
 
 // SiteVisit only has a 2-step flow (site photo/video+location, then visit
 // notes + chart) — it completes at step 2 instead of step 3.
@@ -214,6 +234,8 @@ export async function POST(req: Request) {
 
       await setTaskStatus(taskType, taskId, "COMPLETED");
     }
+
+    await notifyStaffOfStepCompletion(taskType, Number(step), session.user.name || "A Doer", task.customerName);
 
     const updated = await prisma.taskStep.findUnique({ where: { taskType_taskId: { taskType, taskId } } });
     return NextResponse.json({ step: updated }, { status: 200 });

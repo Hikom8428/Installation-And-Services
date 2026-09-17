@@ -39,7 +39,7 @@ export async function PATCH(
       return NextResponse.json({ message: "Installation not found" }, { status: 404 });
     }
 
-    await assignDoers("INSTALLATION", id, doerIds, fundAmount, fundNotes);
+    await assignDoers("INSTALLATION", id, doerIds, fundAmount, fundNotes, installation.customerName);
 
     if (installation.status === "PENDING") {
       await prisma.installation.update({ where: { id }, data: { status: "ASSIGNED" } });

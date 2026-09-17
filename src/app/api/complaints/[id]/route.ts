@@ -39,7 +39,7 @@ export async function PATCH(
       return NextResponse.json({ message: "Complaint not found" }, { status: 404 });
     }
 
-    await assignDoers("COMPLAINT", id, doerIds, fundAmount, fundNotes);
+    await assignDoers("COMPLAINT", id, doerIds, fundAmount, fundNotes, complaint.customerName);
 
     if (complaint.status === "PENDING") {
       await prisma.complaint.update({ where: { id }, data: { status: "ASSIGNED" } });

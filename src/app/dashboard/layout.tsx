@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { LayoutDashboard, Users, FileText, ClipboardList, LogOut, Wrench, Menu, MapPin, X } from "lucide-react";
+import PushNotificationSetup from "@/components/PushNotificationSetup";
 
 export default function DashboardLayout({
   children,
@@ -49,6 +50,8 @@ export default function DashboardLayout({
 
   return (
     <div className="flex h-screen bg-slate-50 text-slate-900 font-sans overflow-hidden">
+      <PushNotificationSetup userId={session.user.id} />
+
       {/* Backdrop, mobile only, shown while the sidebar is open */}
       {sidebarOpen && (
         <div

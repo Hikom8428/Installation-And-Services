@@ -1,6 +1,13 @@
 import { prisma } from "@/lib/prisma";
+import { sendPushToUsers } from "@/lib/onesignal-server";
 
 export type TaskType = "INSTALLATION" | "COMPLAINT" | "SITE_VISIT";
+
+const taskTypeLabel: Record<TaskType, string> = {
+  INSTALLATION: "Installation",
+  COMPLAINT: "Complaint",
+  SITE_VISIT: "Site Visit",
+};
 
 export interface AssignmentInfo {
   doerId: string;
@@ -53,12 +60,15 @@ export async function isTaskAssignedToDoer(taskType: TaskType, taskId: string, d
 
 // Adds (or updates the fund on) one or more Doers for a task. Additive —
 // doesn't touch any Doer already assigned but not included in doerIds.
+// taskLabel (e.g. the customer's name) is used only for the push notification
+// text sent to each newly-assigned Doer.
 export async function assignDoers(
   taskType: TaskType,
   taskId: string,
   doerIds: string[],
   fundAmount: number | null,
-  fundNotes: string | null
+  fundNotes: string | null,
+  taskLabel?: string
 ) {
   for (const doerId of doerIds) {
     await prisma.taskAssignment.upsert({
@@ -70,6 +80,12 @@ export async function assignDoers(
       create: { taskType, taskId, doerId, fundAmount, fundNotes },
     });
   }
+
+  await sendPushToUsers({
+    userIds: doerIds,
+    title: "New task assigned",
+    message: `You've been assigned a ${taskTypeLabel[taskType]}${taskLabel ? `: ${taskLabel}` : ""}.`,
+  });
 }
 
 export async function unassignDoer(taskType: TaskType, taskId: string, doerId: string) {
