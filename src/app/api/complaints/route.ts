@@ -2,22 +2,57 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
+import { randomUUID } from "crypto";
+import { mkdir, writeFile } from "fs/promises";
+import path from "path";
 
-// Create a new complaint (Open for public or staff)
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5MB
+
+async function saveAttachment(file: File): Promise<string> {
+  const uploadDir = path.join(process.cwd(), "public", "uploads", "complaints");
+  await mkdir(uploadDir, { recursive: true });
+
+  const ext = path.extname(file.name) || "";
+  const filename = `${randomUUID()}${ext}`;
+  const buffer = Buffer.from(await file.arrayBuffer());
+  await writeFile(path.join(uploadDir, filename), buffer);
+
+  return `/uploads/complaints/${filename}`;
+}
+
+// Create a new complaint (Open for public or staff) — accepts multipart/form-data
+// so the optional invoice/bill attachment can be uploaded alongside the fields.
 export async function POST(req: Request) {
   try {
-    const body = await req.json();
-    const { customerName, customerPhone, issueDescription } = body;
+    const formData = await req.formData();
 
-    if (!customerName || !customerPhone || !issueDescription) {
-      return NextResponse.json({ message: "All fields are required" }, { status: 400 });
+    const jobNo = (formData.get("jobNo") as string | null)?.trim() || null;
+    const customerName = (formData.get("customerName") as string | null)?.trim();
+    const customerPhone = (formData.get("customerPhone") as string | null)?.trim();
+    const customerEmail = (formData.get("customerEmail") as string | null)?.trim() || null;
+    const issueDescription = (formData.get("issueDescription") as string | null)?.trim();
+    const attachment = formData.get("attachment");
+
+    if (!jobNo || !customerName || !customerPhone || !issueDescription) {
+      return NextResponse.json({ message: "Job No, Customer Name, Mobile Number, and Issue Description are required" }, { status: 400 });
+    }
+
+    let attachmentUrl: string | null = null;
+    if (attachment instanceof File && attachment.size > 0) {
+      if (attachment.size > MAX_ATTACHMENT_BYTES) {
+        return NextResponse.json({ message: "Attachment must be 5MB or smaller" }, { status: 400 });
+      }
+      attachmentUrl = await saveAttachment(attachment);
     }
 
     const complaint = await prisma.complaint.create({
       data: {
+        jobNo,
         customerName,
         customerPhone,
+        customerEmail,
         issueDescription,
+        attachmentUrl,
         status: "PENDING",
       },
     });

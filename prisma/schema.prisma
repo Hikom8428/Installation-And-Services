@@ -45,9 +45,12 @@ model SyncConfig {
 
 model Complaint {
   id               String     @id @default(uuid())
+  jobNo            String?
   customerName     String
   customerPhone    String
+  customerEmail    String?
   issueDescription String
+  attachmentUrl    String?    // uploaded invoice/bill document
   status           String     @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
   assignedDoerId   String?
   assignedDoer     User?      @relation("DoerComplaints", fields: [assignedDoerId], references: [id])

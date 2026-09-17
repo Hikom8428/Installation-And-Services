@@ -2,12 +2,17 @@
 
 import { useState } from "react";
 
+const emptyForm = {
+  jobNo: "",
+  customerName: "",
+  customerPhone: "",
+  customerEmail: "",
+  issueDescription: "",
+};
+
 export default function ComplaintFormPage() {
-  const [formData, setFormData] = useState({
-    customerName: "",
-    customerPhone: "",
-    issueDescription: "",
-  });
+  const [formData, setFormData] = useState(emptyForm);
+  const [attachment, setAttachment] = useState<File | null>(null);
   const [status, setStatus] = useState<{ type: "success" | "error" | ""; message: string }>({ type: "", message: "" });
   const [loading, setLoading] = useState(false);
 
@@ -17,17 +22,25 @@ export default function ComplaintFormPage() {
     setStatus({ type: "", message: "" });
 
     try {
+      const body = new FormData();
+      body.append("jobNo", formData.jobNo);
+      body.append("customerName", formData.customerName);
+      body.append("customerPhone", formData.customerPhone);
+      body.append("customerEmail", formData.customerEmail);
+      body.append("issueDescription", formData.issueDescription);
+      if (attachment) body.append("attachment", attachment);
+
       const res = await fetch("/api/complaints", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body,
       });
 
       const data = await res.json();
 
       if (res.ok) {
         setStatus({ type: "success", message: "Aapki complaint safaltapurvak darj ho gayi hai. Hum jald hi aapse sampark karenge." });
-        setFormData({ customerName: "", customerPhone: "", issueDescription: "" });
+        setFormData(emptyForm);
+        setAttachment(null);
       } else {
         setStatus({ type: "error", message: data.message || "Complaint register karne me error aayi." });
       }
@@ -54,6 +67,17 @@ export default function ComplaintFormPage() {
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div>
+            <label className="block text-sm font-medium text-gray-700">Job No</label>
+            <input
+              type="text"
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+              value={formData.jobNo}
+              onChange={(e) => setFormData({ ...formData, jobNo: e.target.value })}
+            />
+          </div>
+
+          <div>
             <label className="block text-sm font-medium text-gray-700">Customer Name (Grahak ka Naam)</label>
             <input
               type="text"
@@ -75,6 +99,31 @@ export default function ComplaintFormPage() {
               value={formData.customerPhone}
               onChange={(e) => setFormData({ ...formData, customerPhone: e.target.value })}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Email <span className="text-gray-400 font-normal">(Optional)</span>
+            </label>
+            <input
+              type="email"
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+              value={formData.customerEmail}
+              onChange={(e) => setFormData({ ...formData, customerEmail: e.target.value })}
+            />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">
+              Upload Invoice / Bill <span className="text-gray-400 font-normal">(Optional)</span>
+            </label>
+            <input
+              type="file"
+              accept=".pdf,.jpg,.jpeg,.png,.webp"
+              className="mt-1 block w-full text-sm text-gray-600 file:mr-3 file:py-2 file:px-4 file:rounded-md file:border-0 file:text-sm file:font-medium file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+              onChange={(e) => setAttachment(e.target.files?.[0] || null)}
+            />
+            <p className="mt-1 text-xs text-gray-400">PDF or image, max 5MB</p>
           </div>
 
           <div>
@@ -100,4 +149,3 @@ export default function ComplaintFormPage() {
     </div>
   );
 }
-

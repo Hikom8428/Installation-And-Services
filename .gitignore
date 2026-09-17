@@ -40,3 +40,6 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 google-credentials.json
+
+# user-uploaded complaint attachments (persisted on the server, not in git)
+/public/uploads/

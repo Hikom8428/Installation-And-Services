@@ -5,9 +5,12 @@ import { useSession } from "next-auth/react";
 
 interface Complaint {
   id: string;
+  jobNo?: string | null;
   customerName: string;
   customerPhone: string;
+  customerEmail?: string | null;
   issueDescription: string;
+  attachmentUrl?: string | null;
   status: string;
   createdAt: string;
   assignedDoer?: { name: string } | null;
@@ -117,8 +120,10 @@ export default function ComplaintsDashboard() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job No</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attachment</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
@@ -127,7 +132,7 @@ export default function ComplaintsDashboard() {
           <tbody className="bg-white divide-y divide-gray-200">
             {complaints.length === 0 ? (
               <tr>
-                <td colSpan={6} className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
                   No complaints found.
                 </td>
               </tr>
@@ -137,12 +142,25 @@ export default function ComplaintsDashboard() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                     {new Date(complaint.createdAt).toLocaleDateString()}
                   </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                    {complaint.jobNo || "-"}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{complaint.customerName}</div>
                     <div className="text-sm text-gray-500">{complaint.customerPhone}</div>
+                    {complaint.customerEmail && <div className="text-xs text-gray-400">{complaint.customerEmail}</div>}
                   </td>
                   <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                     {complaint.issueDescription}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {complaint.attachmentUrl ? (
+                      <a href={complaint.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
+                        View
+                      </a>
+                    ) : (
+                      <span className="text-gray-400">-</span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(complaint.status)}`}>

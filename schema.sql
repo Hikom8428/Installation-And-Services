@@ -58,9 +58,12 @@ CREATE TABLE `SyncConfig` (
 -- CreateTable
 CREATE TABLE `Complaint` (
     `id` VARCHAR(191) NOT NULL,
+    `jobNo` VARCHAR(191) NULL,
     `customerName` VARCHAR(191) NOT NULL,
     `customerPhone` VARCHAR(191) NOT NULL,
+    `customerEmail` VARCHAR(191) NULL,
     `issueDescription` VARCHAR(191) NOT NULL,
+    `attachmentUrl` VARCHAR(191) NULL,
     `status` VARCHAR(191) NOT NULL DEFAULT 'PENDING',
     `assignedDoerId` VARCHAR(191) NULL,
     `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
