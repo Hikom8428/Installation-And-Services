@@ -4,13 +4,27 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Plus, Pencil, Trash2 } from "lucide-react";
 
+interface OccupiedTask {
+  taskType: "INSTALLATION" | "COMPLAINT" | "SITE_VISIT";
+  taskId: string;
+  label: string;
+  status: string;
+}
+
 interface UserRow {
   id: string;
   name: string;
   email: string;
   role: string;
   createdAt: string;
+  occupied?: OccupiedTask[];
 }
+
+const taskTypeShort: Record<OccupiedTask["taskType"], string> = {
+  INSTALLATION: "Installation",
+  COMPLAINT: "Complaint",
+  SITE_VISIT: "Site Visit",
+};
 
 const emptyForm = { name: "", email: "", password: "", role: "DOER" };
 
@@ -171,6 +185,7 @@ export default function ManageUsersPage() {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Name</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Availability</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Created</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
               </tr>
@@ -178,7 +193,7 @@ export default function ManageUsersPage() {
             <tbody className="divide-y divide-slate-200 bg-white">
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="px-6 py-8 text-center text-slate-500">No users found.</td>
+                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500">No users found.</td>
                 </tr>
               ) : (
                 users.map((u) => (
@@ -189,6 +204,24 @@ export default function ManageUsersPage() {
                       <span className={`px-2.5 py-1 inline-flex text-xs font-semibold rounded-full ${roleBadgeColor(u.role)}`}>
                         {u.role}
                       </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm">
+                      {u.role !== "DOER" ? (
+                        <span className="text-slate-300">-</span>
+                      ) : !u.occupied || u.occupied.length === 0 ? (
+                        <span className="px-2.5 py-1 inline-flex text-xs font-semibold rounded-full bg-green-100 text-green-800">Free</span>
+                      ) : (
+                        <div className="space-y-1">
+                          {u.occupied.map((t) => (
+                            <div key={`${t.taskType}-${t.taskId}`} className="flex items-center gap-1.5">
+                              <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-amber-100 text-amber-800 whitespace-nowrap">
+                                {taskTypeShort[t.taskType]}
+                              </span>
+                              <span className="text-xs text-slate-500 truncate max-w-[10rem]">{t.label}</span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                       {new Date(u.createdAt).toLocaleDateString()}

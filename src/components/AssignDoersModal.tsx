@@ -2,9 +2,17 @@
 
 import { useState } from "react";
 
+interface OccupiedTask {
+  taskType: TaskType;
+  taskId: string;
+  label: string;
+  status: string;
+}
+
 interface Doer {
   id: string;
   name: string;
+  occupied?: OccupiedTask[];
 }
 
 export interface AssignmentInfo {
@@ -116,16 +124,29 @@ export default function AssignDoersModal({ taskType, taskId, isOpen, onClose, do
         {availableDoers.length > 0 ? (
           <>
             <p className="text-xs font-medium text-slate-500 mb-2">Add Doer(s)</p>
-            <div className="space-y-1 mb-4 border border-slate-100 rounded-lg p-2 max-h-40 overflow-y-auto">
+            <div className="space-y-1 mb-4 border border-slate-100 rounded-lg p-2 max-h-48 overflow-y-auto">
               {availableDoers.map((d) => (
-                <label key={d.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer text-sm">
+                <label key={d.id} className="flex items-start gap-2 px-2 py-1.5 rounded-lg hover:bg-slate-50 cursor-pointer text-sm">
                   <input
                     type="checkbox"
                     checked={selected.includes(d.id)}
                     onChange={() => toggle(d.id)}
-                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500"
+                    className="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 mt-0.5"
                   />
-                  <span className="text-slate-700">{d.name}</span>
+                  <span className="flex-1">
+                    <span className="text-slate-700">{d.name}</span>
+                    {!d.occupied || d.occupied.length === 0 ? (
+                      <span className="ml-2 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-green-100 text-green-800">Free</span>
+                    ) : (
+                      <span className="block mt-0.5">
+                        {d.occupied.map((t) => (
+                          <span key={`${t.taskType}-${t.taskId}`} className="mr-1 px-1.5 py-0.5 text-[10px] font-semibold rounded-full bg-amber-100 text-amber-800">
+                            Busy: {t.label}
+                          </span>
+                        ))}
+                      </span>
+                    )}
+                  </span>
                 </label>
               ))}
             </div>

@@ -3,6 +3,7 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { getDoerOccupancy } from "@/lib/taskAssignments";
 
 function isStaff(role: string) {
   return role === "MASTER" || role === "ADMIN" || role === "MANAGER";
@@ -21,7 +22,14 @@ export async function GET() {
       orderBy: { createdAt: "desc" },
     });
 
-    return NextResponse.json(users, { status: 200 });
+    const doerIds = users.filter((u) => u.role === "DOER").map((u) => u.id);
+    const occupancy = await getDoerOccupancy(doerIds);
+    const withOccupancy = users.map((u) => ({
+      ...u,
+      occupied: u.role === "DOER" ? occupancy.get(u.id) || [] : undefined,
+    }));
+
+    return NextResponse.json(withOccupancy, { status: 200 });
   } catch (error) {
     console.error("Error fetching users:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

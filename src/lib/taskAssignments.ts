@@ -93,6 +93,59 @@ export async function attachStepSummary<T extends { id: string }>(
   return tasks.map((t) => ({ ...t, stepSummary: byTaskId.get(t.id) || null }));
 }
 
+export interface DoerOccupancy {
+  taskType: TaskType;
+  taskId: string;
+  label: string;
+  status: string;
+}
+
+// For a set of Doers, finds which non-completed tasks (across all 3 task
+// types) each one is currently assigned to — used to show "Free" vs
+// "Occupied on ..." in the Doer list and the Assign Doers picker.
+export async function getDoerOccupancy(doerIds: string[]): Promise<Map<string, DoerOccupancy[]>> {
+  const result = new Map<string, DoerOccupancy[]>();
+  if (doerIds.length === 0) return result;
+
+  const assignments = await prisma.taskAssignment.findMany({
+    where: { doerId: { in: doerIds } },
+    select: { doerId: true, taskType: true, taskId: true },
+  });
+  if (assignments.length === 0) return result;
+
+  const idsByType: Record<TaskType, string[]> = { INSTALLATION: [], COMPLAINT: [], SITE_VISIT: [] };
+  for (const a of assignments) idsByType[a.taskType as TaskType].push(a.taskId);
+
+  const [installations, complaints, siteVisits] = await Promise.all([
+    idsByType.INSTALLATION.length
+      ? prisma.installation.findMany({ where: { id: { in: idsByType.INSTALLATION } }, select: { id: true, customerName: true, status: true } })
+      : Promise.resolve([]),
+    idsByType.COMPLAINT.length
+      ? prisma.complaint.findMany({ where: { id: { in: idsByType.COMPLAINT } }, select: { id: true, customerName: true, status: true } })
+      : Promise.resolve([]),
+    idsByType.SITE_VISIT.length
+      ? prisma.siteVisit.findMany({ where: { id: { in: idsByType.SITE_VISIT } }, select: { id: true, customerName: true, serialNo: true, status: true } })
+      : Promise.resolve([]),
+  ]);
+
+  const taskById = new Map<string, { label: string; status: string }>();
+  for (const i of installations) taskById.set(`INSTALLATION:${i.id}`, { label: i.customerName, status: i.status });
+  for (const c of complaints) taskById.set(`COMPLAINT:${c.id}`, { label: c.customerName, status: c.status });
+  for (const v of siteVisits) {
+    taskById.set(`SITE_VISIT:${v.id}`, { label: `SV-${String(v.serialNo).padStart(4, "0")} · ${v.customerName}`, status: v.status });
+  }
+
+  for (const a of assignments) {
+    const task = taskById.get(`${a.taskType}:${a.taskId}`);
+    if (!task || task.status === "COMPLETED") continue; // only active work counts as "occupied"
+    const list = result.get(a.doerId) || [];
+    list.push({ taskType: a.taskType as TaskType, taskId: a.taskId, label: task.label, status: task.status });
+    result.set(a.doerId, list);
+  }
+
+  return result;
+}
+
 export async function isTaskAssignedToDoer(taskType: TaskType, taskId: string, doerId: string): Promise<boolean> {
   const row = await prisma.taskAssignment.findUnique({
     where: { taskType_taskId_doerId: { taskType, taskId, doerId } },
