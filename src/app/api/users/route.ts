@@ -4,6 +4,26 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 
+export async function GET() {
+  try {
+    const session = await getServerSession(authOptions);
+
+    if (!session || (session.user.role !== "MASTER" && session.user.role !== "ADMIN")) {
+      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
+    }
+
+    const users = await prisma.user.findMany({
+      select: { id: true, name: true, email: true, role: true, createdAt: true },
+      orderBy: { createdAt: "desc" },
+    });
+
+    return NextResponse.json(users, { status: 200 });
+  } catch (error) {
+    console.error("Error fetching users:", error);
+    return NextResponse.json({ message: "Internal server error" }, { status: 500 });
+  }
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
