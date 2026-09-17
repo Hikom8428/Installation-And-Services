@@ -1,11 +1,32 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { FileText, ClipboardList, Users, ArrowUpRight } from "lucide-react";
 import Link from "next/link";
 
+interface Stats {
+  pendingInstallations: number;
+  activeComplaints: number;
+  resolvedComplaints: number;
+  totalDoers: number;
+}
+
 export default function DashboardPage() {
   const { data: session } = useSession();
+  const [stats, setStats] = useState<Stats | null>(null);
+
+  useEffect(() => {
+    if (!session) return;
+    fetch("/api/dashboard/stats")
+      .then((res) => res.json())
+      .then((data) => {
+        if (data && typeof data.pendingInstallations === "number") setStats(data);
+      })
+      .catch((error) => console.error("Failed to fetch dashboard stats", error));
+  }, [session]);
+
+  const isDoer = session?.user?.role === "DOER";
 
   return (
     <div className="space-y-6">
@@ -19,7 +40,7 @@ export default function DashboardPage() {
           </p>
         </div>
       </div>
-      
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         {/* Card 1 */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:shadow-md transition-shadow">
@@ -27,18 +48,15 @@ export default function DashboardPage() {
             <div className="w-12 h-12 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center">
               <FileText className="w-6 h-6" />
             </div>
-            <span className="inline-flex items-center gap-1 text-xs font-medium text-green-600 bg-green-50 px-2 py-1 rounded-full">
-              +12% <ArrowUpRight className="w-3 h-3"/>
-            </span>
           </div>
           <div>
-            <h3 className="text-slate-500 text-sm font-medium">Pending Installations</h3>
+            <h3 className="text-slate-500 text-sm font-medium">{isDoer ? "My Pending Installations" : "Pending Installations"}</h3>
             <div className="flex items-baseline gap-2 mt-1">
-              <p className="text-4xl font-bold text-slate-900">24</p>
+              <p className="text-4xl font-bold text-slate-900">{stats ? stats.pendingInstallations : "—"}</p>
             </div>
           </div>
         </div>
-        
+
         {/* Card 2 */}
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:shadow-md transition-shadow">
           <div className="flex justify-between items-start mb-4">
@@ -47,29 +65,30 @@ export default function DashboardPage() {
             </div>
           </div>
           <div>
-            <h3 className="text-slate-500 text-sm font-medium">Active Complaints</h3>
+            <h3 className="text-slate-500 text-sm font-medium">{isDoer ? "My Active Complaints" : "Active Complaints"}</h3>
             <div className="flex items-baseline gap-2 mt-1">
-              <p className="text-4xl font-bold text-slate-900">8</p>
-              <span className="text-sm text-slate-500 font-medium">/ 12 resolved</span>
+              <p className="text-4xl font-bold text-slate-900">{stats ? stats.activeComplaints : "—"}</p>
+              <span className="text-sm text-slate-500 font-medium">{stats ? `/ ${stats.resolvedComplaints} resolved` : ""}</span>
             </div>
           </div>
         </div>
-        
+
         {/* Card 3 */}
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:shadow-md transition-shadow">
-          <div className="flex justify-between items-start mb-4">
-            <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
-              <Users className="w-6 h-6" />
+        {!isDoer && (
+          <div className="bg-white p-6 rounded-2xl shadow-sm border border-slate-100 flex flex-col justify-between group hover:shadow-md transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+              <div className="w-12 h-12 rounded-xl bg-indigo-50 text-indigo-600 flex items-center justify-center">
+                <Users className="w-6 h-6" />
+              </div>
+            </div>
+            <div>
+              <h3 className="text-slate-500 text-sm font-medium">Total Doers</h3>
+              <div className="flex items-baseline gap-2 mt-1">
+                <p className="text-4xl font-bold text-slate-900">{stats ? stats.totalDoers : "—"}</p>
+              </div>
             </div>
           </div>
-          <div>
-            <h3 className="text-slate-500 text-sm font-medium">Available Doers</h3>
-            <div className="flex items-baseline gap-2 mt-1">
-              <p className="text-4xl font-bold text-slate-900">5</p>
-              <span className="text-sm text-slate-500 font-medium">online</span>
-            </div>
-          </div>
-        </div>
+        )}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-8">
@@ -89,7 +108,7 @@ export default function DashboardPage() {
               </div>
               <ArrowUpRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500" />
             </Link>
-            
+
             {(session?.user.role === "MASTER" || session?.user.role === "ADMIN") && (
               <Link href="/dashboard/users/new" className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-indigo-200 hover:bg-indigo-50 transition-colors group">
                 <div className="flex items-center gap-4">
