@@ -15,7 +15,12 @@ export async function GET() {
     if (session.user.role === "DOER") {
       installations = await prisma.installation.findMany({
         where: { assignedDoerId: session.user.id },
-        orderBy: { syncDate: 'desc' }
+        orderBy: { syncDate: 'desc' },
+        include: {
+          assignedDoer: {
+            select: { name: true }
+          }
+        }
       });
     } else {
       installations = await prisma.installation.findMany({

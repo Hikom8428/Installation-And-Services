@@ -270,11 +270,10 @@ export default function InstallationsDashboard() {
                           )}
                         </div>
                       ) : (
-                        inst.assignedDoer && (
-                          <button onClick={() => setProgressModal({ isOpen: true, installationId: inst.id })} className="text-green-600 hover:text-green-900">
-                            Update Progress
-                          </button>
-                        )
+                        // A Doer's list is already filtered to their own assigned tasks
+                        <button onClick={() => setProgressModal({ isOpen: true, installationId: inst.id })} className="text-green-600 hover:text-green-900">
+                          Update Progress
+                        </button>
                       )}
                     </td>
                   </tr>

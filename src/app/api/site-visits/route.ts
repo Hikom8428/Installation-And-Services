@@ -5,14 +5,12 @@ import { authOptions } from "@/lib/auth";
 
 const VALID_VISIT_FOR = ["DOOR", "PANEL", "DOOR_PANEL"];
 
-// Create a new Site Visit request — raised internally by staff (not public),
-// via the dashboard's "Site Visits" tab.
+// Create a new Site Visit request. Open to the public (via /site-visit-form,
+// a shareable link anyone can fill in — clients included) as well as staff
+// raising one from the dashboard's "Site Visits" tab.
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
-    if (!session || (session.user.role !== "MASTER" && session.user.role !== "ADMIN" && session.user.role !== "MANAGER")) {
-      return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
-    }
 
     const body = await req.json();
     const customerName = (body.customerName || "").trim();
@@ -29,7 +27,7 @@ export async function POST(req: Request) {
 
     const siteVisit = await prisma.siteVisit.create({
       data: {
-        raisedById: session.user.id,
+        raisedById: session?.user.id || null,
         customerName,
         siteAddress,
         siteLatitude,
@@ -61,6 +59,10 @@ export async function GET() {
       siteVisits = await prisma.siteVisit.findMany({
         where: { assignedDoerId: session.user.id },
         orderBy: { createdAt: "desc" },
+        include: {
+          assignedDoer: { select: { name: true } },
+          raisedBy: { select: { name: true } },
+        },
       });
     } else {
       siteVisits = await prisma.siteVisit.findMany({

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
-import { FileText, ClipboardList, Users, ArrowUpRight } from "lucide-react";
+import { FileText, ClipboardList, Users, ArrowUpRight, MapPin } from "lucide-react";
 import Link from "next/link";
 
 interface Stats {
@@ -107,6 +107,19 @@ export default function DashboardPage() {
                 </div>
               </div>
               <ArrowUpRight className="w-5 h-5 text-slate-300 group-hover:text-blue-500" />
+            </Link>
+
+            <Link href="/site-visit-form" target="_blank" className="flex items-center justify-between p-4 rounded-xl border border-slate-100 hover:border-emerald-200 hover:bg-emerald-50 transition-colors group">
+              <div className="flex items-center gap-4">
+                <div className="w-10 h-10 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center">
+                  <MapPin className="w-5 h-5" />
+                </div>
+                <div>
+                  <p className="font-semibold text-slate-900 group-hover:text-emerald-700">Open Site Visit Form</p>
+                  <p className="text-xs text-slate-500">Request a site visit — shareable with anyone</p>
+                </div>
+              </div>
+              <ArrowUpRight className="w-5 h-5 text-slate-300 group-hover:text-emerald-500" />
             </Link>
 
             {(session?.user.role === "MASTER" || session?.user.role === "ADMIN") && (
