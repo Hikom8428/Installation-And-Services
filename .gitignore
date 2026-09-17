@@ -43,3 +43,6 @@ google-credentials.json
 
 # user-uploaded complaint attachments (persisted on the server, not in git)
 /public/uploads/
+
+# locally-built APKs — grab these from disk, don't commit binaries to git
+/android-apk-builds/
