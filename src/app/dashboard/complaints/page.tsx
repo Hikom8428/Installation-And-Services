@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import TaskProgressModal from "@/components/TaskProgressModal";
 import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal";
+import StatusTabs from "@/components/StatusTabs";
 
 interface Complaint {
   id: string;
@@ -39,6 +40,7 @@ export default function ComplaintsDashboard() {
   // Modals state
   const [assignModal, setAssignModal] = useState<{ isOpen: boolean; complaintId: string }>({ isOpen: false, complaintId: "" });
   const [progressModal, setProgressModal] = useState<{ isOpen: boolean; complaintId: string }>({ isOpen: false, complaintId: "" });
+  const [activeTab, setActiveTab] = useState<"PENDING" | "COMPLETED">("PENDING");
 
   const fetchComplaints = async () => {
     try {
@@ -83,6 +85,10 @@ export default function ComplaintsDashboard() {
 
   if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
+  const pendingComplaints = complaints.filter((c) => c.status !== "COMPLETED");
+  const completedComplaints = complaints.filter((c) => c.status === "COMPLETED");
+  const visibleComplaints = activeTab === "COMPLETED" ? completedComplaints : pendingComplaints;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -96,6 +102,14 @@ export default function ComplaintsDashboard() {
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-4 pt-2">
+          <StatusTabs
+            active={activeTab}
+            onChange={setActiveTab}
+            pendingCount={pendingComplaints.length}
+            completedCount={completedComplaints.length}
+          />
+        </div>
         <div className="overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
@@ -112,14 +126,14 @@ export default function ComplaintsDashboard() {
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-200 bg-white">
-            {complaints.length === 0 ? (
+            {visibleComplaints.length === 0 ? (
               <tr>
                 <td colSpan={9} className="px-6 py-8 text-center text-slate-500">
-                  No complaints found.
+                  {activeTab === "COMPLETED" ? "No completed complaints yet." : "No pending complaints found."}
                 </td>
               </tr>
             ) : (
-              complaints.map((complaint) => (
+              visibleComplaints.map((complaint) => (
                 <tr key={complaint.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     {new Date(complaint.createdAt).toLocaleDateString()}

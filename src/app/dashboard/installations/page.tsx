@@ -5,6 +5,7 @@ import { useSession } from "next-auth/react";
 import { RefreshCw, Settings } from "lucide-react";
 import TaskProgressModal from "@/components/TaskProgressModal";
 import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal";
+import StatusTabs from "@/components/StatusTabs";
 
 interface Installation {
   id: string;
@@ -31,6 +32,7 @@ export default function InstallationsDashboard() {
 
   // Which sheet columns are currently configured to show in the table
   const [selectedColumns, setSelectedColumns] = useState<string[]>([]);
+  const [activeTab, setActiveTab] = useState<"PENDING" | "COMPLETED">("PENDING");
 
   // Modals state
   const [assignModal, setAssignModal] = useState<{ isOpen: boolean; installationId: string }>({ isOpen: false, installationId: "" });
@@ -158,6 +160,10 @@ export default function InstallationsDashboard() {
   // selection has been fetched (or for Doers, who can't configure columns).
   const displayColumns = selectedColumns.length > 0 ? selectedColumns : ["Client Name", "Order Details"];
 
+  const pendingInstallations = installations.filter((i) => i.status !== "COMPLETED");
+  const completedInstallations = installations.filter((i) => i.status === "COMPLETED");
+  const visibleInstallations = activeTab === "COMPLETED" ? completedInstallations : pendingInstallations;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -194,6 +200,14 @@ export default function InstallationsDashboard() {
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-4 pt-2">
+          <StatusTabs
+            active={activeTab}
+            onChange={setActiveTab}
+            pendingCount={pendingInstallations.length}
+            completedCount={completedInstallations.length}
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
@@ -209,14 +223,14 @@ export default function InstallationsDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
-              {installations.length === 0 ? (
+              {visibleInstallations.length === 0 ? (
                 <tr>
                   <td colSpan={displayColumns.length + 3} className="px-6 py-8 text-center text-slate-500">
-                    No installations found. Click Sync to pull data from Google Sheets.
+                    {activeTab === "COMPLETED" ? "No completed installations yet." : "No pending installations found. Click Sync to pull data from Google Sheets."}
                   </td>
                 </tr>
               ) : (
-                installations.map((inst) => (
+                visibleInstallations.map((inst) => (
                   <tr key={inst.id} className="hover:bg-slate-50 transition-colors">
                     {displayColumns.map((col) => {
                       const value = inst.data?.[col] || (col === "Client Name" ? inst.customerName : "");

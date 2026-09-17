@@ -6,6 +6,7 @@ import dynamic from "next/dynamic";
 import { Plus } from "lucide-react";
 import TaskProgressModal from "@/components/TaskProgressModal";
 import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal";
+import StatusTabs from "@/components/StatusTabs";
 
 const LocationPicker = dynamic(() => import("@/components/LocationPicker"), {
   ssr: false,
@@ -56,6 +57,7 @@ export default function SiteVisitsDashboard() {
 
   const [assignModal, setAssignModal] = useState<{ isOpen: boolean; visitId: string }>({ isOpen: false, visitId: "" });
   const [progressModal, setProgressModal] = useState<{ isOpen: boolean; visitId: string }>({ isOpen: false, visitId: "" });
+  const [activeTab, setActiveTab] = useState<"PENDING" | "COMPLETED">("PENDING");
 
   const isStaff = session?.user.role === "MASTER" || session?.user.role === "ADMIN" || session?.user.role === "MANAGER";
 
@@ -132,6 +134,10 @@ export default function SiteVisitsDashboard() {
 
   if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
+  const pendingVisits = visits.filter((v) => v.status !== "COMPLETED");
+  const completedVisits = visits.filter((v) => v.status === "COMPLETED");
+  const visibleVisits = activeTab === "COMPLETED" ? completedVisits : pendingVisits;
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -157,6 +163,14 @@ export default function SiteVisitsDashboard() {
       )}
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="px-4 pt-2">
+          <StatusTabs
+            active={activeTab}
+            onChange={setActiveTab}
+            pendingCount={pendingVisits.length}
+            completedCount={completedVisits.length}
+          />
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
@@ -171,12 +185,14 @@ export default function SiteVisitsDashboard() {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200 bg-white">
-              {visits.length === 0 ? (
+              {visibleVisits.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="px-6 py-8 text-center text-slate-500">No site visits found.</td>
+                  <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
+                    {activeTab === "COMPLETED" ? "No completed site visits yet." : "No pending site visits found."}
+                  </td>
                 </tr>
               ) : (
-                visits.map((v) => (
+                visibleVisits.map((v) => (
                   <tr key={v.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                       SV-{String(v.serialNo).padStart(4, "0")}
