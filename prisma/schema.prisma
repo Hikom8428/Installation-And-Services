@@ -78,16 +78,23 @@ model TaskStep {
 }
 
 model Complaint {
-  id               String     @id @default(uuid())
-  jobNo            String?
-  customerName     String
-  customerPhone    String
-  customerEmail    String?
-  issueDescription String
-  attachmentUrl    String?    // uploaded invoice/bill document
-  status           String     @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
-  assignedDoerId   String?
-  assignedDoer     User?      @relation("DoerComplaints", fields: [assignedDoerId], references: [id])
-  createdAt        DateTime   @default(now())
-  updatedAt        DateTime   @updatedAt
+  id                 String     @id @default(uuid())
+  jobNo              String?    // at least one of jobNo / doorSerialNo is required
+  doorSerialNo       String?
+  customerName       String
+  customerPhone      String
+  customerEmail      String?
+  siteAddress        String?
+  siteLatitude       Float?     // picked by the customer on the map
+  siteLongitude      Float?
+  attendantName      String?    // person present at the site, if different from the customer
+  attendantPhone     String?
+  issueDescription   String
+  attachmentUrl      String?    // uploaded invoice/bill document
+  mediaUrls          Json?      // uploaded problem photos/videos (array of URLs)
+  status             String     @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
+  assignedDoerId     String?
+  assignedDoer       User?      @relation("DoerComplaints", fields: [assignedDoerId], references: [id])
+  createdAt          DateTime   @default(now())
+  updatedAt          DateTime   @updatedAt
 }

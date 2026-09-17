@@ -7,11 +7,18 @@ import TaskProgressModal from "@/components/TaskProgressModal";
 interface Complaint {
   id: string;
   jobNo?: string | null;
+  doorSerialNo?: string | null;
   customerName: string;
   customerPhone: string;
   customerEmail?: string | null;
+  siteAddress?: string | null;
+  siteLatitude?: number | null;
+  siteLongitude?: number | null;
+  attendantName?: string | null;
+  attendantPhone?: string | null;
   issueDescription: string;
   attachmentUrl?: string | null;
+  mediaUrls?: string[] | null;
   status: string;
   createdAt: string;
   assignedDoer?: { name: string } | null;
@@ -105,10 +112,11 @@ export default function ComplaintsDashboard() {
           <thead className="bg-gray-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job No</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job / Door No</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Attachment</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Media</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
@@ -117,7 +125,7 @@ export default function ComplaintsDashboard() {
           <tbody className="bg-white divide-y divide-gray-200">
             {complaints.length === 0 ? (
               <tr>
-                <td colSpan={8} className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan={9} className="px-6 py-4 text-center text-sm text-gray-500">
                   No complaints found.
                 </td>
               </tr>
@@ -128,24 +136,51 @@ export default function ComplaintsDashboard() {
                     {new Date(complaint.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {complaint.jobNo || "-"}
+                    <div>{complaint.jobNo || "-"}</div>
+                    {complaint.doorSerialNo && <div className="text-xs text-gray-400">Door: {complaint.doorSerialNo}</div>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-gray-900">{complaint.customerName}</div>
                     <div className="text-sm text-gray-500">{complaint.customerPhone}</div>
                     {complaint.customerEmail && <div className="text-xs text-gray-400">{complaint.customerEmail}</div>}
                   </td>
+                  <td className="px-6 py-4 text-sm text-gray-500 max-w-[12rem]">
+                    {complaint.siteAddress && <div className="truncate">{complaint.siteAddress}</div>}
+                    {complaint.siteLatitude != null && complaint.siteLongitude != null && (
+                      <a
+                        href={`https://www.google.com/maps?q=${complaint.siteLatitude},${complaint.siteLongitude}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline text-xs block"
+                      >
+                        View on map
+                      </a>
+                    )}
+                    {complaint.attendantName && (
+                      <div className="text-xs text-gray-400">
+                        {complaint.attendantName}{complaint.attendantPhone ? ` · ${complaint.attendantPhone}` : ""}
+                      </div>
+                    )}
+                    {!complaint.siteAddress && complaint.siteLatitude == null && !complaint.attendantName && "-"}
+                  </td>
                   <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
                     {complaint.issueDescription}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {complaint.attachmentUrl ? (
-                      <a href={complaint.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
-                        View
-                      </a>
-                    ) : (
-                      <span className="text-gray-400">-</span>
-                    )}
+                    <div className="flex flex-col gap-0.5">
+                      {complaint.attachmentUrl && (
+                        <a href={complaint.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-xs">
+                          Bill
+                        </a>
+                      )}
+                      {complaint.mediaUrls?.map((url, i) => (
+                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-xs">
+                          Media {i + 1}
+                        </a>
+                      ))}
+                      {!complaint.attachmentUrl && (!complaint.mediaUrls || complaint.mediaUrls.length === 0) && (
+                        <span className="text-gray-400">-</span>
+                      )}
+                    </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(complaint.status)}`}>
