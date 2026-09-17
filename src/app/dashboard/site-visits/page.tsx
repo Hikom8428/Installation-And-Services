@@ -231,7 +231,7 @@ export default function SiteVisitsDashboard() {
                     </td>
                     {activeTab === "COMPLETED" && (
                       <td className="px-6 py-4">
-                        <CompletedTaskSummary assignments={v.assignments} stepSummary={v.stepSummary} showExpense={false} />
+                        <CompletedTaskSummary assignments={v.assignments} stepSummary={v.stepSummary} showExpense />
                       </td>
                     )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">

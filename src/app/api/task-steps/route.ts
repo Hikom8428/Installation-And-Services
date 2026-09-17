@@ -32,10 +32,10 @@ async function notifyStaffOfStepCompletion(taskType: TaskType, stepNumber: numbe
   });
 }
 
-// SiteVisit only has a 2-step flow (site photo/video+location, then visit
-// notes + chart) — it completes at step 2 instead of step 3.
-function totalStepsFor(taskType: TaskType) {
-  return taskType === "SITE_VISIT" ? 2 : 3;
+// All task types share the same 3-step flow: site photo/video+location,
+// then work evidence (or, for SiteVisit, visit notes + chart), then expense/bills.
+function totalStepsFor(_taskType: TaskType) {
+  return 3;
 }
 
 async function getTask(taskType: TaskType, taskId: string) {
@@ -194,9 +194,6 @@ export async function POST(req: Request) {
           where: { taskType_taskId: { taskType, taskId } },
           data: { notes, chartUrl, step2At: new Date() },
         });
-
-        // SiteVisit's flow ends at step 2.
-        await setTaskStatus(taskType, taskId, "COMPLETED");
       } else {
         const evidence = formData.get("evidence");
         if (!(evidence instanceof File) || evidence.size === 0) {
