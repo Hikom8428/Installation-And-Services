@@ -24,10 +24,11 @@ async function getSheetHeaders() {
     scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
   });
 
+  const sheetName = process.env.GOOGLE_SHEET_NAME || "DATA";
   const sheets = google.sheets({ version: "v4", auth });
   const response = await sheets.spreadsheets.values.get({
     spreadsheetId,
-    range: "'DATA'!A1:ZZ1",
+    range: `'${sheetName}'!A1:ZZ1`,
   });
 
   const headerRow = response.data.values?.[0] || [];

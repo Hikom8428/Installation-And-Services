@@ -27,12 +27,13 @@ export async function POST(req: Request) {
       scopes: ["https://www.googleapis.com/auth/spreadsheets.readonly"],
     });
 
+    const sheetName = process.env.GOOGLE_SHEET_NAME || "DATA";
     const sheets = google.sheets({ version: "v4", auth });
 
     // Fetch the header row (row 1) plus all data rows (row 2 onwards)
     const response = await sheets.spreadsheets.values.get({
       spreadsheetId,
-      range: "'DATA'!A1:ZZ1000",
+      range: `'${sheetName}'!A1:ZZ1000`,
     });
 
     const allRows = response.data.values;
