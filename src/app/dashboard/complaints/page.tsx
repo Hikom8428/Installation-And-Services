@@ -81,55 +81,59 @@ export default function ComplaintsDashboard() {
     }
   };
 
-  if (loading) return <div>Loading complaints...</div>;
+  if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
   return (
-    <div>
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-gray-800">Complaints Management</h1>
-        <a href="/complaint-form" target="_blank" className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 text-sm font-medium">
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Complaints</h1>
+          <p className="text-sm text-slate-500 mt-1">Manage customer-reported service complaints</p>
+        </div>
+        <a href="/complaint-form" target="_blank" className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
           Open Public Form ↗
         </a>
       </div>
 
-      <div className="bg-white rounded-lg shadow overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-200">
-          <thead className="bg-gray-50">
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+        <div className="overflow-x-auto">
+        <table className="min-w-full divide-y divide-slate-200">
+          <thead className="bg-slate-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Job / Door No</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Site</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Issue</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Media</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Assigned To</th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Action</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Job / Door No</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Site</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Issue</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Media</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Assigned To</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
             </tr>
           </thead>
-          <tbody className="bg-white divide-y divide-gray-200">
+          <tbody className="divide-y divide-slate-200 bg-white">
             {complaints.length === 0 ? (
               <tr>
-                <td colSpan={9} className="px-6 py-4 text-center text-sm text-gray-500">
+                <td colSpan={9} className="px-6 py-8 text-center text-slate-500">
                   No complaints found.
                 </td>
               </tr>
             ) : (
               complaints.map((complaint) => (
-                <tr key={complaint.id}>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                <tr key={complaint.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     {new Date(complaint.createdAt).toLocaleDateString()}
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     <div>{complaint.jobNo || "-"}</div>
-                    {complaint.doorSerialNo && <div className="text-xs text-gray-400">Door: {complaint.doorSerialNo}</div>}
+                    {complaint.doorSerialNo && <div className="text-xs text-slate-400">Door: {complaint.doorSerialNo}</div>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{complaint.customerName}</div>
-                    <div className="text-sm text-gray-500">{complaint.customerPhone}</div>
-                    {complaint.customerEmail && <div className="text-xs text-gray-400">{complaint.customerEmail}</div>}
+                    <div className="text-sm font-medium text-slate-900">{complaint.customerName}</div>
+                    <div className="text-sm text-slate-500">{complaint.customerPhone}</div>
+                    {complaint.customerEmail && <div className="text-xs text-slate-400">{complaint.customerEmail}</div>}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 max-w-[12rem]">
+                  <td className="px-6 py-4 text-sm text-slate-500 max-w-[12rem]">
                     {complaint.siteAddress && <div className="truncate">{complaint.siteAddress}</div>}
                     {complaint.siteLatitude != null && complaint.siteLongitude != null && (
                       <a
@@ -141,13 +145,13 @@ export default function ComplaintsDashboard() {
                       </a>
                     )}
                     {complaint.attendantName && (
-                      <div className="text-xs text-gray-400">
+                      <div className="text-xs text-slate-400">
                         {complaint.attendantName}{complaint.attendantPhone ? ` · ${complaint.attendantPhone}` : ""}
                       </div>
                     )}
                     {!complaint.siteAddress && complaint.siteLatitude == null && !complaint.attendantName && "-"}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-500 max-w-xs truncate">
+                  <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate">
                     {complaint.issueDescription}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
@@ -163,16 +167,16 @@ export default function ComplaintsDashboard() {
                         </a>
                       ))}
                       {!complaint.attachmentUrl && (!complaint.mediaUrls || complaint.mediaUrls.length === 0) && (
-                        <span className="text-gray-400">-</span>
+                        <span className="text-slate-400">-</span>
                       )}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(complaint.status)}`}>
+                    <span className={`px-2.5 py-1 inline-flex text-xs font-semibold rounded-full ${getStatusColor(complaint.status)}`}>
                       {complaint.status}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
                     {complaint.assignments.length > 0 ? complaint.assignments.map((a) => a.doerName).join(", ") : "Unassigned"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
@@ -192,6 +196,7 @@ export default function ComplaintsDashboard() {
             )}
           </tbody>
         </table>
+        </div>
       </div>
 
       {/* Assign Modal */}

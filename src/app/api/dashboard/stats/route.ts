@@ -4,6 +4,14 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getAssignedTaskIds } from "@/lib/taskAssignments";
 
+interface ActivityItem {
+  type: "INSTALLATION" | "COMPLAINT" | "SITE_VISIT";
+  id: string;
+  title: string;
+  status: string;
+  updatedAt: string;
+}
+
 export async function GET() {
   try {
     const session = await getServerSession(authOptions);
@@ -11,7 +19,7 @@ export async function GET() {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
-    // Doers only see counts for work assigned to them; everyone else sees the org-wide totals.
+    // Doers only see counts/activity for work assigned to them; everyone else sees org-wide totals.
     const isDoer = session.user.role === "DOER";
     const installationWhere = isDoer
       ? { id: { in: await getAssignedTaskIds("INSTALLATION", session.user.id) } }
@@ -19,16 +27,92 @@ export async function GET() {
     const complaintWhere = isDoer
       ? { id: { in: await getAssignedTaskIds("COMPLAINT", session.user.id) } }
       : {};
+    const siteVisitWhere = isDoer
+      ? { id: { in: await getAssignedTaskIds("SITE_VISIT", session.user.id) } }
+      : {};
 
-    const [pendingInstallations, activeComplaints, resolvedComplaints, totalDoers] = await Promise.all([
+    const [
+      pendingInstallations,
+      totalInstallations,
+      activeComplaints,
+      resolvedComplaints,
+      totalComplaints,
+      activeSiteVisits,
+      completedSiteVisits,
+      totalSiteVisits,
+      totalDoers,
+      recentInstallations,
+      recentComplaints,
+      recentSiteVisits,
+    ] = await Promise.all([
       prisma.installation.count({ where: { ...installationWhere, status: "PENDING" } }),
+      prisma.installation.count({ where: installationWhere }),
       prisma.complaint.count({ where: { ...complaintWhere, status: { not: "COMPLETED" } } }),
       prisma.complaint.count({ where: { ...complaintWhere, status: "COMPLETED" } }),
+      prisma.complaint.count({ where: complaintWhere }),
+      prisma.siteVisit.count({ where: { ...siteVisitWhere, status: { not: "COMPLETED" } } }),
+      prisma.siteVisit.count({ where: { ...siteVisitWhere, status: "COMPLETED" } }),
+      prisma.siteVisit.count({ where: siteVisitWhere }),
       prisma.user.count({ where: { role: "DOER" } }),
+      prisma.installation.findMany({
+        where: installationWhere,
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+        select: { id: true, customerName: true, status: true, updatedAt: true },
+      }),
+      prisma.complaint.findMany({
+        where: complaintWhere,
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+        select: { id: true, customerName: true, status: true, updatedAt: true },
+      }),
+      prisma.siteVisit.findMany({
+        where: siteVisitWhere,
+        orderBy: { updatedAt: "desc" },
+        take: 5,
+        select: { id: true, customerName: true, status: true, updatedAt: true, serialNo: true },
+      }),
     ]);
 
+    const recentActivity: ActivityItem[] = [
+      ...recentInstallations.map((i) => ({
+        type: "INSTALLATION" as const,
+        id: i.id,
+        title: i.customerName,
+        status: i.status,
+        updatedAt: i.updatedAt.toISOString(),
+      })),
+      ...recentComplaints.map((c) => ({
+        type: "COMPLAINT" as const,
+        id: c.id,
+        title: c.customerName,
+        status: c.status,
+        updatedAt: c.updatedAt.toISOString(),
+      })),
+      ...recentSiteVisits.map((v) => ({
+        type: "SITE_VISIT" as const,
+        id: v.id,
+        title: `SV-${String(v.serialNo).padStart(4, "0")} · ${v.customerName}`,
+        status: v.status,
+        updatedAt: v.updatedAt.toISOString(),
+      })),
+    ]
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
+      .slice(0, 6);
+
     return NextResponse.json(
-      { pendingInstallations, activeComplaints, resolvedComplaints, totalDoers },
+      {
+        pendingInstallations,
+        totalInstallations,
+        activeComplaints,
+        resolvedComplaints,
+        totalComplaints,
+        activeSiteVisits,
+        completedSiteVisits,
+        totalSiteVisits,
+        totalDoers,
+        recentActivity,
+      },
       { status: 200 }
     );
   } catch (error) {
