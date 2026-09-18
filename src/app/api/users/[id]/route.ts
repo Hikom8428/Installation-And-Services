@@ -104,6 +104,15 @@ export async function DELETE(
 
     return NextResponse.json({ message: "User deleted" }, { status: 200 });
   } catch (error) {
+    // Doers keep a permanent TaskAssignment history (see the reopen/round
+    // feature) — the FK on doerId is ON DELETE RESTRICT, so a Doer who has
+    // ever worked on anything can't be hard-deleted.
+    if (error && typeof error === "object" && "code" in error && error.code === "P2003") {
+      return NextResponse.json(
+        { message: "This user has task assignment history and cannot be deleted. Remove or reassign their tasks first if needed." },
+        { status: 400 }
+      );
+    }
     console.error("Error deleting user:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }

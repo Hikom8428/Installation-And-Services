@@ -49,6 +49,10 @@ export default function ComplaintsDashboard() {
   const [assignModal, setAssignModal] = useState<{ isOpen: boolean; complaintId: string }>({ isOpen: false, complaintId: "" });
   const [progressModal, setProgressModal] = useState<{ isOpen: boolean; complaintId: string; cycle?: number; roundLabel?: string }>({ isOpen: false, complaintId: "" });
   const [activeTab, setActiveTab] = useState<"PENDING" | "COMPLETED">("PENDING");
+  const [deleteTarget, setDeleteTarget] = useState<Complaint | null>(null);
+  const [deleting, setDeleting] = useState(false);
+
+  const isMaster = session?.user.role === "MASTER";
 
   const fetchComplaints = async () => {
     try {
@@ -91,6 +95,26 @@ export default function ComplaintsDashboard() {
       case "IN_PROGRESS": return "bg-purple-100 text-purple-800";
       case "COMPLETED": return "bg-green-100 text-green-800";
       default: return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const id = deleteTarget.taskId || deleteTarget.id;
+      const res = await fetch(`/api/complaints/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        fetchComplaints();
+      } else {
+        const data = await res.json();
+        alert(data.message || "Failed to delete complaint");
+      }
+    } catch (error) {
+      alert("An error occurred while deleting");
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -224,12 +248,18 @@ export default function ComplaintsDashboard() {
                         >
                           View Progress
                         </button>
+                        {isMaster && (
+                          <button onClick={() => setDeleteTarget(complaint)} className="text-red-600 hover:text-red-900">Delete</button>
+                        )}
                       </div>
                     ) : session?.user.role !== "DOER" ? (
                       <div className="flex items-center gap-3">
                         <button onClick={() => setAssignModal({ isOpen: true, complaintId: complaint.id })} className="text-indigo-600 hover:text-indigo-900">Assign Doer</button>
                         {complaint.assignments.length > 0 && (
                           <button onClick={() => setProgressModal({ isOpen: true, complaintId: complaint.id })} className="text-blue-600 hover:text-blue-900">View Progress</button>
+                        )}
+                        {isMaster && (
+                          <button onClick={() => setDeleteTarget(complaint)} className="text-red-600 hover:text-red-900">Delete</button>
                         )}
                       </div>
                     ) : (
@@ -269,6 +299,35 @@ export default function ComplaintsDashboard() {
           roundLabel={progressModal.roundLabel}
           onUpdated={fetchComplaints}
         />
+      )}
+
+      {/* Delete Confirm Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-sm">
+            <h3 className="text-lg font-bold mb-2 text-slate-900">Delete Complaint</h3>
+            <p className="text-sm text-slate-500 mb-4">
+              Are you sure you want to permanently delete the complaint for{" "}
+              <span className="font-semibold text-slate-700">{deleteTarget.customerName}</span>
+              {deleteTarget.jobNo ? ` (${deleteTarget.jobNo})` : ""}? This also removes its assignment and progress history. This cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 bg-slate-100 text-slate-700 p-2.5 rounded-lg text-sm font-medium hover:bg-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 bg-red-600 text-white p-2.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

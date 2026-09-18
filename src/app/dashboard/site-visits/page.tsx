@@ -72,8 +72,11 @@ export default function SiteVisitsDashboard() {
   const [assignModal, setAssignModal] = useState<{ isOpen: boolean; visitId: string }>({ isOpen: false, visitId: "" });
   const [progressModal, setProgressModal] = useState<{ isOpen: boolean; visitId: string; cycle?: number; roundLabel?: string }>({ isOpen: false, visitId: "" });
   const [activeTab, setActiveTab] = useState<"PENDING" | "COMPLETED">("PENDING");
+  const [deleteTarget, setDeleteTarget] = useState<SiteVisit | null>(null);
+  const [deleting, setDeleting] = useState(false);
 
   const isStaff = session?.user.role === "MASTER" || session?.user.role === "ADMIN" || session?.user.role === "MANAGER";
+  const isMaster = session?.user.role === "MASTER";
 
   const fetchVisits = async () => {
     try {
@@ -146,6 +149,26 @@ export default function SiteVisitsDashboard() {
     } finally {
       setSaving(false);
       setTimeout(() => setMessage(""), 5000);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteTarget) return;
+    setDeleting(true);
+    try {
+      const id = deleteTarget.taskId || deleteTarget.id;
+      const res = await fetch(`/api/site-visits/${id}`, { method: "DELETE" });
+      if (res.ok) {
+        fetchVisits();
+      } else {
+        const data = await res.json();
+        alert(data.message || "Failed to delete site visit");
+      }
+    } catch (error) {
+      alert("An error occurred while deleting");
+    } finally {
+      setDeleting(false);
+      setDeleteTarget(null);
     }
   };
 
@@ -274,6 +297,9 @@ export default function SiteVisitsDashboard() {
                           >
                             View Progress
                           </button>
+                          {isMaster && (
+                            <button onClick={() => setDeleteTarget(v)} className="text-red-600 hover:text-red-900">Delete</button>
+                          )}
                         </div>
                       ) : isStaff ? (
                         <div className="flex items-center gap-3">
@@ -284,6 +310,9 @@ export default function SiteVisitsDashboard() {
                             <button onClick={() => setProgressModal({ isOpen: true, visitId: v.id })} className="text-blue-600 hover:text-blue-900">
                               View Progress
                             </button>
+                          )}
+                          {isMaster && (
+                            <button onClick={() => setDeleteTarget(v)} className="text-red-600 hover:text-red-900">Delete</button>
                           )}
                         </div>
                       ) : (
@@ -413,6 +442,34 @@ export default function SiteVisitsDashboard() {
           roundLabel={progressModal.roundLabel}
           onUpdated={fetchVisits}
         />
+      )}
+
+      {/* Delete Confirm Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-slate-900/50 overflow-y-auto h-full w-full flex items-center justify-center z-50 p-4">
+          <div className="bg-white p-6 rounded-xl shadow-lg w-full max-w-sm">
+            <h3 className="text-lg font-bold mb-2 text-slate-900">Delete Site Visit</h3>
+            <p className="text-sm text-slate-500 mb-4">
+              Are you sure you want to permanently delete SV-{String(deleteTarget.serialNo).padStart(4, "0")} for{" "}
+              <span className="font-semibold text-slate-700">{deleteTarget.customerName}</span>? This also removes its assignment and progress history. This cannot be undone.
+            </p>
+            <div className="flex gap-2">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 bg-slate-100 text-slate-700 p-2.5 rounded-lg text-sm font-medium hover:bg-slate-200"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting}
+                className="flex-1 bg-red-600 text-white p-2.5 rounded-lg text-sm font-medium hover:bg-red-700 disabled:opacity-60"
+              >
+                {deleting ? "Deleting..." : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

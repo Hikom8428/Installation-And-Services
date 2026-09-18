@@ -49,7 +49,9 @@ export async function PATCH(
   }
 }
 
-// Unassign a single Doer: DELETE /api/complaints/[id]?doerId=xxx
+// DELETE /api/complaints/[id]?doerId=xxx — unassign a single Doer (any staff).
+// DELETE /api/complaints/[id] (no doerId) — permanently delete the whole
+// complaint record, e.g. to remove a duplicate. Master only.
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -62,14 +64,28 @@ export async function DELETE(
 
     const { id } = await params;
     const doerId = new URL(req.url).searchParams.get("doerId");
-    if (!doerId) {
-      return NextResponse.json({ message: "doerId query param is required" }, { status: 400 });
+
+    if (doerId) {
+      await unassignDoer("COMPLAINT", id, doerId);
+      return NextResponse.json({ message: "Doer unassigned" }, { status: 200 });
     }
 
-    await unassignDoer("COMPLAINT", id, doerId);
-    return NextResponse.json({ message: "Doer unassigned" }, { status: 200 });
+    if (session.user.role !== "MASTER") {
+      return NextResponse.json({ message: "Only Master can delete a Complaint" }, { status: 403 });
+    }
+
+    const existing = await prisma.complaint.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ message: "Complaint not found" }, { status: 404 });
+    }
+
+    await prisma.taskAssignment.deleteMany({ where: { taskType: "COMPLAINT", taskId: id } });
+    await prisma.taskStep.deleteMany({ where: { taskType: "COMPLAINT", taskId: id } });
+    await prisma.complaint.delete({ where: { id } });
+
+    return NextResponse.json({ message: "Complaint deleted" }, { status: 200 });
   } catch (error) {
-    console.error("Error unassigning complaint doer:", error);
+    console.error("Error deleting complaint:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }

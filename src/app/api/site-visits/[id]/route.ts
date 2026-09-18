@@ -50,7 +50,9 @@ export async function PATCH(
   }
 }
 
-// Unassign a single Doer: DELETE /api/site-visits/[id]?doerId=xxx
+// DELETE /api/site-visits/[id]?doerId=xxx — unassign a single Doer (any staff).
+// DELETE /api/site-visits/[id] (no doerId) — permanently delete the whole
+// site visit record, e.g. to remove a duplicate. Master only.
 export async function DELETE(
   req: Request,
   { params }: { params: Promise<{ id: string }> }
@@ -63,14 +65,28 @@ export async function DELETE(
 
     const { id } = await params;
     const doerId = new URL(req.url).searchParams.get("doerId");
-    if (!doerId) {
-      return NextResponse.json({ message: "doerId query param is required" }, { status: 400 });
+
+    if (doerId) {
+      await unassignDoer("SITE_VISIT", id, doerId);
+      return NextResponse.json({ message: "Doer unassigned" }, { status: 200 });
     }
 
-    await unassignDoer("SITE_VISIT", id, doerId);
-    return NextResponse.json({ message: "Doer unassigned" }, { status: 200 });
+    if (session.user.role !== "MASTER") {
+      return NextResponse.json({ message: "Only Master can delete a Site Visit" }, { status: 403 });
+    }
+
+    const existing = await prisma.siteVisit.findUnique({ where: { id } });
+    if (!existing) {
+      return NextResponse.json({ message: "Site Visit not found" }, { status: 404 });
+    }
+
+    await prisma.taskAssignment.deleteMany({ where: { taskType: "SITE_VISIT", taskId: id } });
+    await prisma.taskStep.deleteMany({ where: { taskType: "SITE_VISIT", taskId: id } });
+    await prisma.siteVisit.delete({ where: { id } });
+
+    return NextResponse.json({ message: "Site Visit deleted" }, { status: 200 });
   } catch (error) {
-    console.error("Error unassigning site visit doer:", error);
+    console.error("Error deleting site visit:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });
   }
 }
