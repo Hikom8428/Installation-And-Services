@@ -6,6 +6,7 @@ import TaskProgressModal from "@/components/TaskProgressModal";
 import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal";
 import StatusTabs from "@/components/StatusTabs";
 import CompletedTaskSummary, { StepSummary } from "@/components/CompletedTaskSummary";
+import ExpandableText from "@/components/ExpandableText";
 
 interface Complaint {
   id: string;
@@ -189,8 +190,8 @@ export default function ComplaintsDashboard() {
                     <div className="text-sm text-slate-500">{complaint.customerPhone}</div>
                     {complaint.customerEmail && <div className="text-xs text-slate-400">{complaint.customerEmail}</div>}
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-500 max-w-[16rem] whitespace-normal break-words">
-                    {complaint.siteAddress && <div>{complaint.siteAddress}</div>}
+                  <td className="px-6 py-4 text-sm text-slate-500 max-w-[16rem]">
+                    <ExpandableText text={complaint.siteAddress} />
                     {complaint.siteLatitude != null && complaint.siteLongitude != null && (
                       <a
                         href={`https://www.google.com/maps?q=${complaint.siteLatitude},${complaint.siteLongitude}`}
@@ -207,8 +208,8 @@ export default function ComplaintsDashboard() {
                     )}
                     {!complaint.siteAddress && complaint.siteLatitude == null && !complaint.attendantName && "-"}
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-500 max-w-xs whitespace-normal break-words">
-                    {complaint.issueDescription}
+                  <td className="px-6 py-4 text-sm text-slate-500 max-w-xs">
+                    <ExpandableText text={complaint.issueDescription} />
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex flex-col gap-0.5">

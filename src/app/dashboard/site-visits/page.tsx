@@ -8,6 +8,7 @@ import TaskProgressModal from "@/components/TaskProgressModal";
 import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal";
 import StatusTabs from "@/components/StatusTabs";
 import CompletedTaskSummary, { StepSummary } from "@/components/CompletedTaskSummary";
+import ExpandableText from "@/components/ExpandableText";
 
 const LocationPicker = dynamic(() => import("@/components/LocationPicker"), {
   ssr: false,
@@ -253,8 +254,8 @@ export default function SiteVisitsDashboard() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{visitForLabel(v.visitFor)}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600 max-w-[16rem] whitespace-normal break-words">
-                      {v.siteAddress && <div>{v.siteAddress}</div>}
+                    <td className="px-6 py-4 text-sm text-slate-600 max-w-[16rem]">
+                      <ExpandableText text={v.siteAddress} />
                       {v.siteLatitude != null && v.siteLongitude != null && (
                         <a
                           href={`https://www.google.com/maps?q=${v.siteLatitude},${v.siteLongitude}`}

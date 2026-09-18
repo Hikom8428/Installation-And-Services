@@ -7,6 +7,7 @@ import TaskProgressModal from "@/components/TaskProgressModal";
 import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal";
 import StatusTabs from "@/components/StatusTabs";
 import CompletedTaskSummary, { StepSummary } from "@/components/CompletedTaskSummary";
+import ExpandableText from "@/components/ExpandableText";
 
 interface Installation {
   id: string;
@@ -248,13 +249,13 @@ export default function InstallationsDashboard() {
                       const value = inst.data?.[col] || (col === "Client Name" ? inst.customerName : "");
                       const isLink = /^https?:\/\//i.test(value);
                       return (
-                        <td key={col} className="px-6 py-4 text-sm text-slate-600 max-w-xs whitespace-normal break-words">
+                        <td key={col} className="px-6 py-4 text-sm text-slate-600 max-w-xs">
                           {isLink ? (
                             <a href={value} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline">
                               View
                             </a>
                           ) : (
-                            value || "-"
+                            <ExpandableText text={value || "-"} />
                           )}
                         </td>
                       );
