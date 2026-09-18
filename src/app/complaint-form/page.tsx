@@ -15,6 +15,7 @@ const MAX_VIDEOS = 2;
 const emptyForm = {
   jobNoDigits: "",
   doorSerialNo: "",
+  warrantyStatus: "",
   customerName: "",
   customerPhone: "",
   customerEmail: "",
@@ -60,6 +61,10 @@ export default function ComplaintFormPage() {
       setStatus({ type: "error", message: "Please provide either Job No or Door Serial No." });
       return;
     }
+    if (!formData.warrantyStatus) {
+      setStatus({ type: "error", message: "Please select whether the product is In Warranty or Out of Warranty." });
+      return;
+    }
     if (photos.length < 1) {
       setStatus({ type: "error", message: "Please upload at least 1 problem photo." });
       return;
@@ -75,6 +80,7 @@ export default function ComplaintFormPage() {
       const body = new FormData();
       body.append("jobNo", jobNo);
       body.append("doorSerialNo", formData.doorSerialNo);
+      body.append("warrantyStatus", formData.warrantyStatus);
       body.append("customerName", formData.customerName);
       body.append("customerPhone", formData.customerPhone);
       body.append("customerEmail", formData.customerEmail);
@@ -158,6 +164,20 @@ export default function ComplaintFormPage() {
               value={formData.doorSerialNo}
               onChange={(e) => setFormData({ ...formData, doorSerialNo: e.target.value })}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Warranty Status</label>
+            <select
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+              value={formData.warrantyStatus}
+              onChange={(e) => setFormData({ ...formData, warrantyStatus: e.target.value })}
+            >
+              <option value="">Select...</option>
+              <option value="IN_WARRANTY">In Warranty</option>
+              <option value="OUT_OF_WARRANTY">Out of Warranty</option>
+            </select>
           </div>
 
           <div>

@@ -217,7 +217,7 @@ export default function ManageUsersPage() {
                               <span className="px-2 py-0.5 inline-flex text-xs font-semibold rounded-full bg-amber-100 text-amber-800 whitespace-nowrap">
                                 {taskTypeShort[t.taskType]}
                               </span>
-                              <span className="text-xs text-slate-500 truncate max-w-[10rem]">{t.label}</span>
+                              <span className="text-xs text-slate-500 max-w-[10rem] whitespace-normal break-words">{t.label}</span>
                             </div>
                           ))}
                         </div>

@@ -128,6 +128,7 @@ CREATE TABLE `Complaint` (
     `id` VARCHAR(191) NOT NULL,
     `jobNo` VARCHAR(191) NULL,
     `doorSerialNo` VARCHAR(191) NULL,
+    `warrantyStatus` VARCHAR(191) NULL,
     `customerName` VARCHAR(191) NOT NULL,
     `customerPhone` VARCHAR(191) NOT NULL,
     `customerEmail` VARCHAR(191) NULL,

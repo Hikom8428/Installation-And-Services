@@ -132,6 +132,7 @@ model Complaint {
   id                 String     @id @default(uuid())
   jobNo              String?    // at least one of jobNo / doorSerialNo is required
   doorSerialNo       String?
+  warrantyStatus     String?    // IN_WARRANTY | OUT_OF_WARRANTY
   customerName       String
   customerPhone      String
   customerEmail      String?

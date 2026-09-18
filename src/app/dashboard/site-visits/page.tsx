@@ -253,8 +253,8 @@ export default function SiteVisitsDashboard() {
                       )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{visitForLabel(v.visitFor)}</td>
-                    <td className="px-6 py-4 text-sm text-slate-600 max-w-[12rem]">
-                      {v.siteAddress && <div className="truncate">{v.siteAddress}</div>}
+                    <td className="px-6 py-4 text-sm text-slate-600 max-w-[16rem] whitespace-normal break-words">
+                      {v.siteAddress && <div>{v.siteAddress}</div>}
                       {v.siteLatitude != null && v.siteLongitude != null && (
                         <a
                           href={`https://www.google.com/maps?q=${v.siteLatitude},${v.siteLongitude}`}

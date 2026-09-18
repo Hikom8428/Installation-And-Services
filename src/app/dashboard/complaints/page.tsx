@@ -14,6 +14,7 @@ interface Complaint {
   customerName: string;
   customerPhone: string;
   customerEmail?: string | null;
+  warrantyStatus?: string | null;
   siteAddress?: string | null;
   siteLatitude?: number | null;
   siteLongitude?: number | null;
@@ -177,14 +178,19 @@ export default function ComplaintsDashboard() {
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     <div>{complaint.jobNo || "-"}</div>
                     {complaint.doorSerialNo && <div className="text-xs text-slate-400">Door: {complaint.doorSerialNo}</div>}
+                    {complaint.warrantyStatus && (
+                      <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold rounded-full ${complaint.warrantyStatus === "IN_WARRANTY" ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}`}>
+                        {complaint.warrantyStatus === "IN_WARRANTY" ? "In Warranty" : "Out of Warranty"}
+                      </span>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-slate-900">{complaint.customerName}</div>
                     <div className="text-sm text-slate-500">{complaint.customerPhone}</div>
                     {complaint.customerEmail && <div className="text-xs text-slate-400">{complaint.customerEmail}</div>}
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-500 max-w-[12rem]">
-                    {complaint.siteAddress && <div className="truncate">{complaint.siteAddress}</div>}
+                  <td className="px-6 py-4 text-sm text-slate-500 max-w-[16rem] whitespace-normal break-words">
+                    {complaint.siteAddress && <div>{complaint.siteAddress}</div>}
                     {complaint.siteLatitude != null && complaint.siteLongitude != null && (
                       <a
                         href={`https://www.google.com/maps?q=${complaint.siteLatitude},${complaint.siteLongitude}`}
@@ -201,7 +207,7 @@ export default function ComplaintsDashboard() {
                     )}
                     {!complaint.siteAddress && complaint.siteLatitude == null && !complaint.attendantName && "-"}
                   </td>
-                  <td className="px-6 py-4 text-sm text-slate-500 max-w-xs truncate">
+                  <td className="px-6 py-4 text-sm text-slate-500 max-w-xs whitespace-normal break-words">
                     {complaint.issueDescription}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
