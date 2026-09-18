@@ -16,6 +16,7 @@ const emptyForm = {
   jobNoDigits: "",
   doorSerialNo: "",
   warrantyStatus: "",
+  brand: "",
   customerName: "",
   customerPhone: "",
   customerEmail: "",
@@ -65,6 +66,10 @@ export default function ComplaintFormPage() {
       setStatus({ type: "error", message: "Please select whether the product is In Warranty or Out of Warranty." });
       return;
     }
+    if (!formData.brand) {
+      setStatus({ type: "error", message: "Please select the Brand." });
+      return;
+    }
     if (photos.length < 1) {
       setStatus({ type: "error", message: "Please upload at least 1 problem photo." });
       return;
@@ -81,6 +86,7 @@ export default function ComplaintFormPage() {
       body.append("jobNo", jobNo);
       body.append("doorSerialNo", formData.doorSerialNo);
       body.append("warrantyStatus", formData.warrantyStatus);
+      body.append("brand", formData.brand);
       body.append("customerName", formData.customerName);
       body.append("customerPhone", formData.customerPhone);
       body.append("customerEmail", formData.customerEmail);
@@ -177,6 +183,20 @@ export default function ComplaintFormPage() {
               <option value="">Select...</option>
               <option value="IN_WARRANTY">In Warranty</option>
               <option value="OUT_OF_WARRANTY">Out of Warranty</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Brand</label>
+            <select
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+              value={formData.brand}
+              onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+            >
+              <option value="">Select...</option>
+              <option value="HIKOM">Hikom</option>
+              <option value="HICON">Hicon</option>
             </select>
           </div>
 

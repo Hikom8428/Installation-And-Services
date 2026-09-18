@@ -73,6 +73,7 @@ export default function GuideBookPage() {
       <Section title="Getting Started" roles="all" userRole={role}>
         <p>The sidebar (menu on mobile) has all the sections you have access to: Overview, Installations, Complaints, Site Visits{isStaff ? ", Manage Users" : ""}, and this Guide Book.</p>
         <p>Every task (Installation, Complaint, or Site Visit) always has a status: <strong>PENDING</strong> → <strong>ASSIGNED</strong> → <strong>IN_PROGRESS</strong> → <strong>COMPLETED</strong>. Each list page has a <strong>Pending</strong> and a <strong>Completed</strong> tab — a task moves itself to Completed automatically once its final step is submitted.</p>
+        <p>Near the top of Installations, Complaints, Site Visits, Reports, and the Overview page you&apos;ll also see a <strong>Hikom / Hicon / Sara System</strong> switch — use it to view just one brand&apos;s data or everything combined.</p>
       </Section>
 
       <Section title="Your Tasks (Doer)" roles={["DOER"]} userRole={role}>

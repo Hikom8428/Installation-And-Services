@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { FileText, ClipboardList, MapPin } from "lucide-react";
 import DailyExpenseChart from "@/components/DailyExpenseChart";
+import BrandFilter, { Brand } from "@/components/BrandFilter";
 
 type Preset = "WEEK" | "MONTH" | "CUSTOM";
 
@@ -58,14 +59,16 @@ export default function ReportsPage() {
   const [data, setData] = useState<ReportsData | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [brand, setBrand] = useState<Brand>("ALL");
 
   const isStaff = session?.user.role === "MASTER" || session?.user.role === "ADMIN" || session?.user.role === "MANAGER";
 
-  const fetchReports = async (from: string, to: string) => {
+  const fetchReports = async (from: string, to: string, brandValue: Brand) => {
     setLoading(true);
     setError("");
     try {
-      const res = await fetch(`/api/reports?from=${from}&to=${to}`);
+      const url = `/api/reports?from=${from}&to=${to}${brandValue !== "ALL" ? `&brand=${brandValue}` : ""}`;
+      const res = await fetch(url);
       const json = await res.json();
       if (res.ok) setData(json);
       else setError(json.message || "Failed to load reports");
@@ -77,7 +80,7 @@ export default function ReportsPage() {
   };
 
   useEffect(() => {
-    if (isStaff) fetchReports(range.from, range.to);
+    if (isStaff) fetchReports(range.from, range.to, brand);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session]);
 
@@ -85,12 +88,17 @@ export default function ReportsPage() {
     setPreset(p);
     const r = presetRange(p);
     setRange(r);
-    fetchReports(r.from, r.to);
+    fetchReports(r.from, r.to, brand);
   };
 
   const applyCustom = () => {
     setPreset("CUSTOM");
-    fetchReports(range.from, range.to);
+    fetchReports(range.from, range.to, brand);
+  };
+
+  const applyBrand = (b: Brand) => {
+    setBrand(b);
+    fetchReports(range.from, range.to, b);
   };
 
   if (!isStaff) {
@@ -99,9 +107,12 @@ export default function ReportsPage() {
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-slate-900">Reports</h1>
-        <p className="text-sm text-slate-500 mt-1">Pending / Active / Completed counts and expense trends, per task type</p>
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-slate-900">Reports</h1>
+          <p className="text-sm text-slate-500 mt-1">Pending / Active / Completed counts and expense trends, per task type</p>
+        </div>
+        <BrandFilter value={brand} onChange={applyBrand} />
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-4 flex flex-col sm:flex-row sm:items-center gap-3">

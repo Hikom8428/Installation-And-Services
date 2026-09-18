@@ -6,6 +6,14 @@ import { authOptions } from "@/lib/auth";
 
 const SYNC_CONFIG_ID = "default";
 
+// Maps the sheet's free-text "Company" column to one of our two brands.
+function normalizeBrand(raw: string): string | null {
+  const v = raw.toLowerCase();
+  if (v.includes("hikom")) return "HIKOM";
+  if (v.includes("hicon")) return "HICON";
+  return null;
+}
+
 export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
@@ -54,6 +62,7 @@ export async function POST(req: Request) {
     const jobNoIndex = header.findIndex((h) => h.toLowerCase() === "job no");
     const clientNameIndex = header.findIndex((h) => h.toLowerCase() === "client name");
     const orderDetailsIndex = header.findIndex((h) => h.toLowerCase() === "order details");
+    const companyIndex = header.findIndex((h) => h.toLowerCase() === "company");
 
     let syncedCount = 0;
     let updatedCount = 0;
@@ -62,6 +71,7 @@ export async function POST(req: Request) {
       const sourceId = jobNoIndex >= 0 ? (row[jobNoIndex] || "").toString().trim() : "";
       const customerName = (clientNameIndex >= 0 ? row[clientNameIndex] : "")?.toString().trim() || "";
       const productDetails = orderDetailsIndex >= 0 ? (row[orderDetailsIndex] || "").toString().trim() : "";
+      const brand = companyIndex >= 0 ? normalizeBrand((row[companyIndex] || "").toString()) : null;
 
       if (!sourceId && !customerName) continue; // skip fully empty rows
 
@@ -78,12 +88,12 @@ export async function POST(req: Request) {
         if (existing) {
           await prisma.installation.update({
             where: { sourceId },
-            data: { customerName: customerName || existing.customerName, productDetails, data },
+            data: { customerName: customerName || existing.customerName, productDetails, brand: brand ?? existing.brand, data },
           });
           updatedCount++;
         } else {
           await prisma.installation.create({
-            data: { sourceId, customerName: customerName || sourceId, productDetails, data, status: "PENDING" },
+            data: { sourceId, customerName: customerName || sourceId, productDetails, brand, data, status: "PENDING" },
           });
           syncedCount++;
         }
@@ -94,7 +104,7 @@ export async function POST(req: Request) {
         });
         if (!existing) {
           await prisma.installation.create({
-            data: { customerName, productDetails, data, status: "PENDING" },
+            data: { customerName, productDetails, brand, data, status: "PENDING" },
           });
           syncedCount++;
         }

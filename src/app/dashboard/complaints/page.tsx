@@ -7,6 +7,7 @@ import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal"
 import StatusTabs from "@/components/StatusTabs";
 import CompletedTaskSummary, { StepSummary } from "@/components/CompletedTaskSummary";
 import ExpandableText from "@/components/ExpandableText";
+import BrandFilter, { Brand } from "@/components/BrandFilter";
 
 interface Complaint {
   id: string;
@@ -16,6 +17,7 @@ interface Complaint {
   customerPhone: string;
   customerEmail?: string | null;
   warrantyStatus?: string | null;
+  brand?: string | null;
   siteAddress?: string | null;
   siteLatitude?: number | null;
   siteLongitude?: number | null;
@@ -53,6 +55,7 @@ export default function ComplaintsDashboard() {
   const [activeTab, setActiveTab] = useState<"PENDING" | "COMPLETED">("PENDING");
   const [deleteTarget, setDeleteTarget] = useState<Complaint | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [brandFilter, setBrandFilter] = useState<Brand>("ALL");
 
   const isMaster = session?.user.role === "MASTER";
 
@@ -122,7 +125,8 @@ export default function ComplaintsDashboard() {
 
   if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
-  const visibleComplaints = activeTab === "COMPLETED" ? completedComplaints : pendingComplaints;
+  const tabComplaints = activeTab === "COMPLETED" ? completedComplaints : pendingComplaints;
+  const visibleComplaints = brandFilter === "ALL" ? tabComplaints : tabComplaints.filter((c) => c.brand === brandFilter);
 
   return (
     <div className="space-y-6">
@@ -131,6 +135,7 @@ export default function ComplaintsDashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Complaints</h1>
           <p className="text-sm text-slate-500 mt-1">Manage customer-reported service complaints</p>
         </div>
+        <BrandFilter value={brandFilter} onChange={setBrandFilter} />
         <a href="/complaint-form" target="_blank" className="flex items-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 px-4 py-2 rounded-lg text-sm font-medium transition-colors">
           Open Public Form ↗
         </a>
@@ -150,6 +155,7 @@ export default function ComplaintsDashboard() {
           <thead className="bg-slate-50">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Brand</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Job / Door No</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Site</th>
@@ -166,7 +172,7 @@ export default function ComplaintsDashboard() {
           <tbody className="divide-y divide-slate-200 bg-white">
             {visibleComplaints.length === 0 ? (
               <tr>
-                <td colSpan={activeTab === "COMPLETED" ? 10 : 9} className="px-6 py-8 text-center text-slate-500">
+                <td colSpan={activeTab === "COMPLETED" ? 11 : 10} className="px-6 py-8 text-center text-slate-500">
                   {activeTab === "COMPLETED" ? "No completed complaints yet." : "No pending complaints found."}
                 </td>
               </tr>
@@ -175,6 +181,15 @@ export default function ComplaintsDashboard() {
                 <tr key={complaint.id} className="hover:bg-slate-50 transition-colors">
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     {new Date(complaint.createdAt).toLocaleDateString()}
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm">
+                    {complaint.brand ? (
+                      <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${complaint.brand === "HIKOM" ? "bg-cyan-100 text-cyan-800" : "bg-fuchsia-100 text-fuchsia-800"}`}>
+                        {complaint.brand === "HIKOM" ? "Hikom" : "Hicon"}
+                      </span>
+                    ) : (
+                      "-"
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     <div>{complaint.jobNo || "-"}</div>

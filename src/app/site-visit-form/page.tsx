@@ -16,6 +16,7 @@ const emptyForm = {
   visitFor: "DOOR",
   raisedVia: "",
   raisedByName: "",
+  brand: "",
 };
 
 const RAISED_VIA_OPTIONS = ["Phone Call", "WhatsApp", "Email", "In Person", "Other"];
@@ -88,6 +89,20 @@ export default function SiteVisitFormPage() {
               value={formData.customerName}
               onChange={(e) => setFormData({ ...formData, customerName: e.target.value })}
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700">Brand</label>
+            <select
+              required
+              className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
+              value={formData.brand}
+              onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+            >
+              <option value="">Select...</option>
+              <option value="HIKOM">Hikom</option>
+              <option value="HICON">Hicon</option>
+            </select>
           </div>
 
           <div>

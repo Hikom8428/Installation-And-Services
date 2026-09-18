@@ -13,6 +13,7 @@ const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // 100MB
 const MAX_PHOTOS = 10;
 const MAX_VIDEOS = 2;
 const VALID_WARRANTY_STATUS = ["IN_WARRANTY", "OUT_OF_WARRANTY"];
+const VALID_BRAND = ["HIKOM", "HICON"];
 
 async function saveUpload(file: File): Promise<string> {
   const uploadDir = path.join(process.cwd(), "public", "uploads", "complaints");
@@ -35,6 +36,7 @@ export async function POST(req: Request) {
     const jobNo = (formData.get("jobNo") as string | null)?.trim() || null;
     const doorSerialNo = (formData.get("doorSerialNo") as string | null)?.trim() || null;
     const warrantyStatus = (formData.get("warrantyStatus") as string | null)?.trim() || null;
+    const brand = (formData.get("brand") as string | null)?.trim() || null;
     const customerName = (formData.get("customerName") as string | null)?.trim();
     const customerPhone = (formData.get("customerPhone") as string | null)?.trim();
     const customerEmail = (formData.get("customerEmail") as string | null)?.trim() || null;
@@ -54,6 +56,9 @@ export async function POST(req: Request) {
     }
     if (!warrantyStatus || !VALID_WARRANTY_STATUS.includes(warrantyStatus)) {
       return NextResponse.json({ message: "Please select whether the product is In Warranty or Out of Warranty" }, { status: 400 });
+    }
+    if (!brand || !VALID_BRAND.includes(brand)) {
+      return NextResponse.json({ message: "Please select the Brand (Hikom or Hicon)" }, { status: 400 });
     }
     if (!customerName || !customerPhone || !issueDescription) {
       return NextResponse.json({ message: "Customer Name, Mobile Number, and Issue Description are required" }, { status: 400 });
@@ -106,6 +111,7 @@ export async function POST(req: Request) {
         jobNo,
         doorSerialNo,
         warrantyStatus,
+        brand,
         customerName,
         customerPhone,
         customerEmail,

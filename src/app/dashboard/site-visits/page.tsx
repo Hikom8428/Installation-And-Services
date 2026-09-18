@@ -9,6 +9,7 @@ import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal"
 import StatusTabs from "@/components/StatusTabs";
 import CompletedTaskSummary, { StepSummary } from "@/components/CompletedTaskSummary";
 import ExpandableText from "@/components/ExpandableText";
+import BrandFilter, { Brand } from "@/components/BrandFilter";
 
 const LocationPicker = dynamic(() => import("@/components/LocationPicker"), {
   ssr: false,
@@ -31,6 +32,7 @@ interface SiteVisit {
   raisedBy?: { name: string } | null;
   raisedVia?: string | null;
   raisedByName?: string | null;
+  brand?: string | null;
   // Present only on Completed-tab (history) rows — each is one past round.
   taskId?: string;
   cycle?: number;
@@ -51,6 +53,7 @@ const emptyForm = {
   visitFor: "DOOR",
   raisedVia: "",
   raisedByName: "",
+  brand: "",
 };
 
 const RAISED_VIA_OPTIONS = ["Phone Call", "WhatsApp", "Email", "In Person", "Other"];
@@ -75,6 +78,7 @@ export default function SiteVisitsDashboard() {
   const [activeTab, setActiveTab] = useState<"PENDING" | "COMPLETED">("PENDING");
   const [deleteTarget, setDeleteTarget] = useState<SiteVisit | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [brandFilter, setBrandFilter] = useState<Brand>("ALL");
 
   const isStaff = session?.user.role === "MASTER" || session?.user.role === "ADMIN" || session?.user.role === "MANAGER";
   const isMaster = session?.user.role === "MASTER";
@@ -175,7 +179,8 @@ export default function SiteVisitsDashboard() {
 
   if (loading) return <div className="p-8 text-center text-slate-500">Loading...</div>;
 
-  const visibleVisits = activeTab === "COMPLETED" ? completedVisits : pendingVisits;
+  const tabVisits = activeTab === "COMPLETED" ? completedVisits : pendingVisits;
+  const visibleVisits = brandFilter === "ALL" ? tabVisits : tabVisits.filter((v) => v.brand === brandFilter);
 
   return (
     <div className="space-y-6">
@@ -184,6 +189,7 @@ export default function SiteVisitsDashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Site Visits</h1>
           <p className="text-sm text-slate-500 mt-1">Schedule and track Doer site visits</p>
         </div>
+        <BrandFilter value={brandFilter} onChange={setBrandFilter} />
         {isStaff && (
           <button
             onClick={() => setCreateModal(true)}
@@ -215,6 +221,7 @@ export default function SiteVisitsDashboard() {
             <thead className="bg-slate-50">
               <tr>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Serial No</th>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Brand</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Requested By</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Visit For</th>
@@ -230,7 +237,7 @@ export default function SiteVisitsDashboard() {
             <tbody className="divide-y divide-slate-200 bg-white">
               {visibleVisits.length === 0 ? (
                 <tr>
-                  <td colSpan={activeTab === "COMPLETED" ? 9 : 8} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={activeTab === "COMPLETED" ? 10 : 9} className="px-6 py-8 text-center text-slate-500">
                     {activeTab === "COMPLETED" ? "No completed site visits yet." : "No pending site visits found."}
                   </td>
                 </tr>
@@ -239,6 +246,15 @@ export default function SiteVisitsDashboard() {
                   <tr key={v.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                       SV-{String(v.serialNo).padStart(4, "0")}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {v.brand ? (
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${v.brand === "HIKOM" ? "bg-cyan-100 text-cyan-800" : "bg-fuchsia-100 text-fuchsia-800"}`}>
+                          {v.brand === "HIKOM" ? "Hikom" : "Hicon"}
+                        </span>
+                      ) : (
+                        "-"
+                      )}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">{v.customerName}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
@@ -342,6 +358,18 @@ export default function SiteVisitsDashboard() {
                   className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900"
                   value={formData.customerName}
                   onChange={(e) => setFormData({ ...formData, customerName: e.target.value })} />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-1">Brand</label>
+                <select required
+                  className="w-full px-3 py-2 border border-slate-200 rounded-lg text-slate-900"
+                  value={formData.brand}
+                  onChange={(e) => setFormData({ ...formData, brand: e.target.value })}
+                >
+                  <option value="">Select...</option>
+                  <option value="HIKOM">Hikom</option>
+                  <option value="HICON">Hicon</option>
+                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-slate-700 mb-1">Site Visit Raised Via</label>

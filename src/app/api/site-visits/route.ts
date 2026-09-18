@@ -5,6 +5,7 @@ import { authOptions } from "@/lib/auth";
 import { getAssignedTaskIds, attachAssignments, attachStepSummary, getCompletedCycles } from "@/lib/taskAssignments";
 
 const VALID_VISIT_FOR = ["DOOR", "PANEL", "DOOR_PANEL"];
+const VALID_BRAND = ["HIKOM", "HICON"];
 
 // Create a new Site Visit request. Open to the public (via /site-visit-form,
 // a shareable link anyone can fill in — clients included) as well as staff
@@ -23,9 +24,13 @@ export async function POST(req: Request) {
     const siteLongitude = typeof body.siteLongitude === "number" ? body.siteLongitude : null;
     const raisedVia = (body.raisedVia || "").trim() || null;
     const raisedByName = (body.raisedByName || "").trim() || null;
+    const brand = (body.brand || "").trim() || null;
 
     if (!customerName || !VALID_VISIT_FOR.includes(visitFor)) {
       return NextResponse.json({ message: "Customer Name and a valid Visit For are required" }, { status: 400 });
+    }
+    if (!brand || !VALID_BRAND.includes(brand)) {
+      return NextResponse.json({ message: "Please select the Brand (Hikom or Hicon)" }, { status: 400 });
     }
 
     const siteVisit = await prisma.siteVisit.create({
@@ -33,6 +38,7 @@ export async function POST(req: Request) {
         raisedById: session?.user.id || null,
         raisedVia,
         raisedByName,
+        brand,
         customerName,
         siteAddress,
         siteLatitude,

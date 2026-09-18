@@ -12,24 +12,31 @@ interface ActivityItem {
   updatedAt: string;
 }
 
-export async function GET() {
+export async function GET(req: Request) {
   try {
     const session = await getServerSession(authOptions);
     if (!session) {
       return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
     }
 
+    const { searchParams } = new URL(req.url);
+    const brandParam = searchParams.get("brand");
+    const brandWhere = brandParam === "HIKOM" || brandParam === "HICON" ? { brand: brandParam } : {};
+
     // Doers only see counts/activity for work assigned to them; everyone else sees org-wide totals.
     const isDoer = session.user.role === "DOER";
-    const installationWhere = isDoer
-      ? { id: { in: await getAssignedTaskIds("INSTALLATION", session.user.id) } }
-      : {};
-    const complaintWhere = isDoer
-      ? { id: { in: await getAssignedTaskIds("COMPLAINT", session.user.id) } }
-      : {};
-    const siteVisitWhere = isDoer
-      ? { id: { in: await getAssignedTaskIds("SITE_VISIT", session.user.id) } }
-      : {};
+    const installationWhere = {
+      ...brandWhere,
+      ...(isDoer ? { id: { in: await getAssignedTaskIds("INSTALLATION", session.user.id) } } : {}),
+    };
+    const complaintWhere = {
+      ...brandWhere,
+      ...(isDoer ? { id: { in: await getAssignedTaskIds("COMPLAINT", session.user.id) } } : {}),
+    };
+    const siteVisitWhere = {
+      ...brandWhere,
+      ...(isDoer ? { id: { in: await getAssignedTaskIds("SITE_VISIT", session.user.id) } } : {}),
+    };
 
     const [
       pendingInstallations,

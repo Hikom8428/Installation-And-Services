@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { FileText, ClipboardList, Users, ArrowUpRight, MapPin, Wrench } from "lucide-react";
 import Link from "next/link";
+import BrandFilter, { Brand } from "@/components/BrandFilter";
 
 interface ActivityItem {
   type: "INSTALLATION" | "COMPLAINT" | "SITE_VISIT";
@@ -86,23 +87,25 @@ function StatCard({
 export default function DashboardPage() {
   const { data: session } = useSession();
   const [stats, setStats] = useState<Stats | null>(null);
+  const [brand, setBrand] = useState<Brand>("ALL");
 
   useEffect(() => {
     if (!session) return;
-    fetch("/api/dashboard/stats")
+    const url = `/api/dashboard/stats${brand !== "ALL" ? `?brand=${brand}` : ""}`;
+    fetch(url)
       .then((res) => res.json())
       .then((data) => {
         if (data && typeof data.pendingInstallations === "number") setStats(data);
       })
       .catch((error) => console.error("Failed to fetch dashboard stats", error));
-  }, [session]);
+  }, [session, brand]);
 
   const isDoer = session?.user?.role === "DOER";
   const v = (n: number | undefined) => (stats ? n : "—");
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-end">
+      <div className="flex flex-col sm:flex-row justify-between sm:items-end gap-3">
         <div>
           <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 tracking-tight">
             Dashboard Overview
@@ -111,6 +114,7 @@ export default function DashboardPage() {
             Welcome back, <span className="font-semibold text-slate-700">{session?.user?.name || "User"}</span>. Here is what's happening today.
           </p>
         </div>
+        <BrandFilter value={brand} onChange={setBrand} />
       </div>
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6">

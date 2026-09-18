@@ -8,11 +8,13 @@ import AssignDoersModal, { AssignmentInfo } from "@/components/AssignDoersModal"
 import StatusTabs from "@/components/StatusTabs";
 import CompletedTaskSummary, { StepSummary } from "@/components/CompletedTaskSummary";
 import ExpandableText from "@/components/ExpandableText";
+import BrandFilter, { Brand } from "@/components/BrandFilter";
 
 interface Installation {
   id: string;
   customerName: string;
   productDetails: string;
+  brand?: string | null;
   status: string;
   syncDate: string;
   assignments: AssignmentInfo[];
@@ -52,6 +54,7 @@ export default function InstallationsDashboard() {
     draft: [],
     loading: false,
   });
+  const [brandFilter, setBrandFilter] = useState<Brand>("ALL");
 
   const fetchInstallations = async () => {
     try {
@@ -172,7 +175,8 @@ export default function InstallationsDashboard() {
   // selection has been fetched (or for Doers, who can't configure columns).
   const displayColumns = selectedColumns.length > 0 ? selectedColumns : ["Client Name", "Order Details"];
 
-  const visibleInstallations = activeTab === "COMPLETED" ? completedInstallations : pendingInstallations;
+  const tabInstallations = activeTab === "COMPLETED" ? completedInstallations : pendingInstallations;
+  const visibleInstallations = brandFilter === "ALL" ? tabInstallations : tabInstallations.filter((i) => i.brand === brandFilter);
 
   return (
     <div className="space-y-6">
@@ -181,6 +185,8 @@ export default function InstallationsDashboard() {
           <h1 className="text-2xl font-bold text-slate-900">Installations</h1>
           <p className="text-sm text-slate-500 mt-1">Manage installation tasks fetched from Google Sheets</p>
         </div>
+
+        <BrandFilter value={brandFilter} onChange={setBrandFilter} />
 
         {session?.user.role !== "DOER" && (
           <div className="flex items-center gap-2">
@@ -222,6 +228,7 @@ export default function InstallationsDashboard() {
           <table className="min-w-full divide-y divide-slate-200">
             <thead className="bg-slate-50">
               <tr>
+                <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Brand</th>
                 {displayColumns.map((col) => (
                   <th key={col} className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider whitespace-nowrap">
                     {col}
@@ -238,13 +245,22 @@ export default function InstallationsDashboard() {
             <tbody className="divide-y divide-slate-200 bg-white">
               {visibleInstallations.length === 0 ? (
                 <tr>
-                  <td colSpan={displayColumns.length + (activeTab === "COMPLETED" ? 4 : 3)} className="px-6 py-8 text-center text-slate-500">
+                  <td colSpan={displayColumns.length + (activeTab === "COMPLETED" ? 5 : 4)} className="px-6 py-8 text-center text-slate-500">
                     {activeTab === "COMPLETED" ? "No completed installations yet." : "No pending installations found. Click Sync to pull data from Google Sheets."}
                   </td>
                 </tr>
               ) : (
                 visibleInstallations.map((inst) => (
                   <tr key={inst.id} className="hover:bg-slate-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm">
+                      {inst.brand ? (
+                        <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${inst.brand === "HIKOM" ? "bg-cyan-100 text-cyan-800" : "bg-fuchsia-100 text-fuchsia-800"}`}>
+                          {inst.brand === "HIKOM" ? "Hikom" : "Hicon"}
+                        </span>
+                      ) : (
+                        "-"
+                      )}
+                    </td>
                     {displayColumns.map((col) => {
                       const value = inst.data?.[col] || (col === "Client Name" ? inst.customerName : "");
                       const isLink = /^https?:\/\//i.test(value);

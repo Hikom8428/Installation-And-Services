@@ -98,13 +98,44 @@ export async function GET(req: Request) {
 
     const dayList = buildDayList(from, to);
 
-    const [installations, complaints, siteVisits, instSteps, compSteps, svSteps] = await Promise.all([
-      prisma.installation.findMany({ where: { syncDate: { gte: from, lte: to } }, select: { status: true } }),
-      prisma.complaint.findMany({ where: { createdAt: { gte: from, lte: to } }, select: { status: true } }),
-      prisma.siteVisit.findMany({ where: { createdAt: { gte: from, lte: to } }, select: { status: true } }),
-      prisma.taskStep.findMany({ where: { taskType: "INSTALLATION", step3At: { gte: from, lte: to } }, select: { step3At: true, expenseAmount: true } }),
-      prisma.taskStep.findMany({ where: { taskType: "COMPLAINT", step3At: { gte: from, lte: to } }, select: { step3At: true, expenseAmount: true } }),
-      prisma.taskStep.findMany({ where: { taskType: "SITE_VISIT", step3At: { gte: from, lte: to } }, select: { step3At: true, expenseAmount: true } }),
+    const brandParam = searchParams.get("brand");
+    const brand = brandParam === "HIKOM" || brandParam === "HICON" ? brandParam : null;
+    const brandWhere = brand ? { brand } : {};
+
+    const [installations, complaints, siteVisits] = await Promise.all([
+      prisma.installation.findMany({ where: { syncDate: { gte: from, lte: to }, ...brandWhere }, select: { status: true } }),
+      prisma.complaint.findMany({ where: { createdAt: { gte: from, lte: to }, ...brandWhere }, select: { status: true } }),
+      prisma.siteVisit.findMany({ where: { createdAt: { gte: from, lte: to }, ...brandWhere }, select: { status: true } }),
+    ]);
+
+    // Expense (TaskStep) rows aren't tagged with brand directly. Total
+    // expense counts every Step 3 submission in the date range regardless of
+    // when its task was raised, so when a brand filter is active we scope it
+    // to that brand's task ids (looked up across all time, not just this
+    // range) rather than reusing the date-scoped rows above.
+    const [instIds, compIds, svIds] = brand
+      ? await Promise.all([
+          prisma.installation.findMany({ where: { brand }, select: { id: true } }).then((r) => r.map((x) => x.id)),
+          prisma.complaint.findMany({ where: { brand }, select: { id: true } }).then((r) => r.map((x) => x.id)),
+          prisma.siteVisit.findMany({ where: { brand }, select: { id: true } }).then((r) => r.map((x) => x.id)),
+        ])
+      : [null, null, null];
+
+    async function expenseStepsFor(taskType: "INSTALLATION" | "COMPLAINT" | "SITE_VISIT", taskIds: string[] | null) {
+      return prisma.taskStep.findMany({
+        where: {
+          taskType,
+          step3At: { gte: from, lte: to },
+          ...(taskIds ? { taskId: { in: taskIds } } : {}),
+        },
+        select: { step3At: true, expenseAmount: true },
+      });
+    }
+
+    const [instSteps, compSteps, svSteps] = await Promise.all([
+      expenseStepsFor("INSTALLATION", instIds),
+      expenseStepsFor("COMPLAINT", compIds),
+      expenseStepsFor("SITE_VISIT", svIds),
     ]);
 
     return NextResponse.json({

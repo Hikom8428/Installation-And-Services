@@ -28,6 +28,7 @@ model Installation {
   customerPhone  String?
   customerAddress String?
   productDetails String?
+  brand          String?    // HIKOM | HICON — derived from the sheet's "Company" column at sync time
   status         String     @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
   currentCycle   Int        @default(1) // bumped each time a COMPLETED task is reopened/reassigned
   syncDate       DateTime   @default(now())
@@ -129,6 +130,7 @@ model SiteVisit {
   attendantName  String?
   attendantPhone String?
   visitFor       String    // DOOR | PANEL | DOOR_PANEL
+  brand          String?   // HIKOM | HICON
   status         String    @default("PENDING") // PENDING, ASSIGNED, IN_PROGRESS, COMPLETED
   currentCycle   Int       @default(1) // bumped each time a COMPLETED visit is reopened/reassigned
   createdAt      DateTime  @default(now())
@@ -140,6 +142,7 @@ model Complaint {
   jobNo              String?    // at least one of jobNo / doorSerialNo is required
   doorSerialNo       String?
   warrantyStatus     String?    // IN_WARRANTY | OUT_OF_WARRANTY
+  brand              String?    // HIKOM | HICON
   customerName       String
   customerPhone      String
   customerEmail      String?
