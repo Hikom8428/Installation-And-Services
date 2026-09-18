@@ -11,7 +11,7 @@ const taskTypeLabel: Record<TaskType, string> = {
 };
 
 export interface AssignmentInfo {
-  doerId: string;
+  doerId: string | null; // null once the Doer's account has been deleted — doerName is the permanent record
   doerName: string;
   fundAmount: number | null;
   fundNotes: string | null;
@@ -60,7 +60,6 @@ export async function attachAssignments<T extends { id: string; currentCycle: nu
   const taskIds = tasks.map((t) => t.id);
   const rows = await prisma.taskAssignment.findMany({
     where: { taskType, taskId: { in: taskIds } },
-    include: { doer: { select: { name: true } } },
     orderBy: { createdAt: "asc" },
   });
 
@@ -69,7 +68,7 @@ export async function attachAssignments<T extends { id: string; currentCycle: nu
   for (const row of rows) {
     if (row.cycle !== cycleByTaskId.get(row.taskId)) continue; // history — not the active cycle
     const list = byTaskId.get(row.taskId) || [];
-    list.push({ doerId: row.doerId, doerName: row.doer.name, fundAmount: row.fundAmount, fundNotes: row.fundNotes });
+    list.push({ doerId: row.doerId, doerName: row.doerName, fundAmount: row.fundAmount, fundNotes: row.fundNotes });
     byTaskId.set(row.taskId, list);
   }
 
@@ -150,7 +149,6 @@ export async function getCompletedCycles(taskType: TaskType, doerId?: string): P
   const taskIds = [...new Set(steps.map((s) => s.taskId))];
   const assignmentRows = await prisma.taskAssignment.findMany({
     where: { taskType, taskId: { in: taskIds } },
-    include: { doer: { select: { name: true } } },
     orderBy: { createdAt: "asc" },
   });
 
@@ -158,7 +156,7 @@ export async function getCompletedCycles(taskType: TaskType, doerId?: string): P
   for (const a of assignmentRows) {
     const key = `${a.taskId}::${a.cycle}`;
     const list = assignByTaskCycle.get(key) || [];
-    list.push({ doerId: a.doerId, doerName: a.doer.name, fundAmount: a.fundAmount, fundNotes: a.fundNotes });
+    list.push({ doerId: a.doerId, doerName: a.doerName, fundAmount: a.fundAmount, fundNotes: a.fundNotes });
     assignByTaskCycle.set(key, list);
   }
 
@@ -215,6 +213,7 @@ export async function getDoerOccupancy(doerIds: string[]): Promise<Map<string, D
   }
 
   for (const a of assignments) {
+    if (!a.doerId) continue; // deleted Doer — never "occupied"
     const task = taskById.get(`${a.taskType}:${a.taskId}`);
     if (!task || task.status === "COMPLETED" || a.cycle !== task.currentCycle) continue; // only active work in the active cycle counts as "occupied"
     const list = result.get(a.doerId) || [];
@@ -272,6 +271,9 @@ export async function assignDoers(
     await updateTaskCore(taskType, taskId, { status: "ASSIGNED" });
   }
 
+  const doers = await prisma.user.findMany({ where: { id: { in: doerIds } }, select: { id: true, name: true } });
+  const nameById = new Map(doers.map((d) => [d.id, d.name]));
+
   for (const doerId of doerIds) {
     await prisma.taskAssignment.upsert({
       where: { taskType_taskId_doerId_cycle: { taskType, taskId, doerId, cycle } },
@@ -279,7 +281,7 @@ export async function assignDoers(
         ...(fundAmount !== null ? { fundAmount } : {}),
         ...(fundNotes !== null ? { fundNotes } : {}),
       },
-      create: { taskType, taskId, doerId, cycle, fundAmount, fundNotes },
+      create: { taskType, taskId, doerId, cycle, doerName: nameById.get(doerId) || "", fundAmount, fundNotes },
     });
   }
 

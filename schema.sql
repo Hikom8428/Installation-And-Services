@@ -55,7 +55,8 @@ CREATE TABLE `TaskAssignment` (
     `id` VARCHAR(191) NOT NULL,
     `taskType` VARCHAR(191) NOT NULL,
     `taskId` VARCHAR(191) NOT NULL,
-    `doerId` VARCHAR(191) NOT NULL,
+    `doerId` VARCHAR(191) NULL,
+    `doerName` VARCHAR(191) NOT NULL DEFAULT '',
     `cycle` INTEGER NOT NULL DEFAULT 1,
     `fundAmount` DOUBLE NULL,
     `fundNotes` VARCHAR(191) NULL,
@@ -149,7 +150,7 @@ CREATE TABLE `Complaint` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- AddForeignKey
-ALTER TABLE `TaskAssignment` ADD CONSTRAINT `TaskAssignment_doerId_fkey` FOREIGN KEY (`doerId`) REFERENCES `User`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE `TaskAssignment` ADD CONSTRAINT `TaskAssignment_doerId_fkey` FOREIGN KEY (`doerId`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE `SiteVisit` ADD CONSTRAINT `SiteVisit_raisedById_fkey` FOREIGN KEY (`raisedById`) REFERENCES `User`(`id`) ON DELETE SET NULL ON UPDATE CASCADE;

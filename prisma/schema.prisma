@@ -40,12 +40,18 @@ model Installation {
 // taskId identify which Installation/Complaint/SiteVisit this is (mirrors
 // TaskStep's polymorphic pattern). fundAmount is the optional cash advance
 // handed to that Doer for that task+cycle at assignment time.
+//
+// doerId is nullable with onDelete: SetNull, and doerName is a snapshot of
+// the Doer's name taken at assignment time — so a Doer account can always be
+// deleted (e.g. an ex-employee) without losing the permanent history of who
+// did the work; the row just keeps showing doerName once doerId goes null.
 model TaskAssignment {
   id         String   @id @default(uuid())
   taskType   String   // "INSTALLATION" | "COMPLAINT" | "SITE_VISIT"
   taskId     String
-  doerId     String
-  doer       User     @relation("DoerTaskAssignments", fields: [doerId], references: [id])
+  doerId     String?
+  doer       User?    @relation("DoerTaskAssignments", fields: [doerId], references: [id], onDelete: SetNull)
+  doerName   String   @default("") // snapshot, survives the Doer account being deleted
   cycle      Int      @default(1) // which round of this task this assignment belongs to
   fundAmount Float?
   fundNotes  String?

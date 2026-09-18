@@ -16,7 +16,7 @@ interface Doer {
 }
 
 export interface AssignmentInfo {
-  doerId: string;
+  doerId: string | null; // null once the Doer's account has been deleted
   doerName: string;
   fundAmount: number | null;
   fundNotes: string | null;
@@ -107,14 +107,16 @@ export default function AssignDoersModal({ taskType, taskId, isOpen, onClose, do
             <p className="text-xs font-medium text-slate-500 mb-2">Currently Assigned</p>
             <div className="space-y-2">
               {currentAssignments.map((a) => (
-                <div key={a.doerId} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-sm">
+                <div key={a.doerId || a.doerName} className="flex items-center justify-between bg-slate-50 rounded-lg px-3 py-2 text-sm">
                   <div>
-                    <span className="font-medium text-slate-800">{a.doerName}</span>
+                    <span className="font-medium text-slate-800">{a.doerName}{!a.doerId && " (account deleted)"}</span>
                     {a.fundAmount != null && <span className="text-xs text-slate-500 ml-2">₹{a.fundAmount} fund</span>}
                   </div>
-                  <button onClick={() => handleRemove(a.doerId)} className="text-red-500 hover:text-red-700 text-xs font-medium">
-                    Remove
-                  </button>
+                  {a.doerId && (
+                    <button onClick={() => handleRemove(a.doerId!)} className="text-red-500 hover:text-red-700 text-xs font-medium">
+                      Remove
+                    </button>
+                  )}
                 </div>
               ))}
             </div>
