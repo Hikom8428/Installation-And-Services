@@ -8,13 +8,14 @@ datasource db {
 }
 
 model User {
-  id        String   @id @default(uuid())
-  name      String
-  email     String   @unique
-  password  String
-  role      String   @default("DOER") // MASTER, ADMIN, MANAGER, DOER
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String    @id @default(uuid())
+  name        String
+  email       String    @unique
+  password    String
+  role        String    @default("DOER") // MASTER, ADMIN, MANAGER, DOER
+  lastLoginAt DateTime? // updated on every successful sign-in
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   raisedSiteVisits SiteVisit[]      @relation("RaisedSiteVisits")
   taskAssignments  TaskAssignment[] @relation("DoerTaskAssignments")

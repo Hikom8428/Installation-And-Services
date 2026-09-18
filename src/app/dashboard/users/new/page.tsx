@@ -16,6 +16,7 @@ interface UserRow {
   name: string;
   email: string;
   role: string;
+  lastLoginAt?: string | null;
   createdAt: string;
   occupied?: OccupiedTask[];
 }
@@ -186,6 +187,9 @@ export default function ManageUsersPage() {
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Email</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Role</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Availability</th>
+                {isMaster && (
+                  <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Last Login</th>
+                )}
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Created</th>
                 <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Action</th>
               </tr>
@@ -193,7 +197,7 @@ export default function ManageUsersPage() {
             <tbody className="divide-y divide-slate-200 bg-white">
               {users.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-6 py-8 text-center text-slate-500">No users found.</td>
+                  <td colSpan={isMaster ? 7 : 6} className="px-6 py-8 text-center text-slate-500">No users found.</td>
                 </tr>
               ) : (
                 users.map((u) => (
@@ -223,6 +227,18 @@ export default function ManageUsersPage() {
                         </div>
                       )}
                     </td>
+                    {isMaster && (
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
+                        {u.lastLoginAt ? (
+                          <>
+                            <div>{new Date(u.lastLoginAt).toLocaleDateString()}</div>
+                            <div className="text-xs text-slate-400">{new Date(u.lastLoginAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                          </>
+                        ) : (
+                          <span className="text-slate-300">Never</span>
+                        )}
+                      </td>
+                    )}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                       {new Date(u.createdAt).toLocaleDateString()}
                     </td>

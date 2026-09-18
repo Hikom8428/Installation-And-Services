@@ -60,6 +60,11 @@ export const authOptions: NextAuthOptions = {
       return session;
     }
   },
+  events: {
+    async signIn({ user }) {
+      await prisma.user.update({ where: { id: user.id }, data: { lastLoginAt: new Date() } });
+    },
+  },
   pages: {
     signIn: "/login",
   },
