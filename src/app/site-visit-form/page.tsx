@@ -77,7 +77,7 @@ export default function SiteVisitFormPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-      <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
+      <div className="max-w-2xl w-full bg-white p-8 rounded-xl shadow-lg">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-gray-900">Request a Site Visit</h2>
           <p className="mt-2 text-sm text-gray-600">HICON Insta & Serv - Service Request</p>
@@ -105,7 +105,7 @@ export default function SiteVisitFormPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700">Customer Name</label>
             <input
@@ -155,7 +155,7 @@ export default function SiteVisitFormPage() {
             />
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700">Site Address</label>
             <textarea
               rows={2}
@@ -165,7 +165,7 @@ export default function SiteVisitFormPage() {
             />
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Site Location <span className="text-gray-400 font-normal">(tap on the map to mark the exact spot)</span>
             </label>
@@ -195,7 +195,7 @@ export default function SiteVisitFormPage() {
             />
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700">Visit For</label>
             <select
               className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-blue-500 focus:border-blue-500 text-black"
@@ -211,7 +211,7 @@ export default function SiteVisitFormPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="sm:col-span-2 w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
           >
             {loading ? "Submitting..." : "Submit Site Visit Request"}
           </button>

@@ -2,9 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
-import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
+import { detectSafeExtension, persistUpload, UploadKind } from "@/lib/fileUpload";
 import { isTaskAssignedToDoer, isTaskAssignedToDoerInCycle } from "@/lib/taskAssignments";
 import { getTaskCore, updateTaskCore, TaskType } from "@/lib/taskCore";
 import { sendPushToUsers } from "@/lib/onesignal-server";
@@ -31,17 +29,18 @@ async function notifyStaffOfStepCompletion(taskType: TaskType, stepNumber: numbe
   });
 }
 
-async function saveUploadedFile(file: File, maxBytes: number): Promise<string> {
+async function saveUploadedFile(file: File, maxBytes: number, allowedKinds: UploadKind[]): Promise<string> {
   if (file.size > maxBytes) {
     throw new Error(`FILE_TOO_LARGE:${file.name}`);
   }
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "task-steps");
-  await mkdir(uploadDir, { recursive: true });
-  const ext = path.extname(file.name) || "";
-  const filename = `${randomUUID()}${ext}`;
   const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, filename), buffer);
-  return `/uploads/task-steps/${filename}`;
+  // Never trust the client-supplied filename/extension — sniff the real content
+  // and derive the on-disk extension from that (see src/lib/fileUpload.ts).
+  const ext = detectSafeExtension(buffer, allowedKinds);
+  if (!ext) {
+    throw new Error(`UNSUPPORTED_FILE_TYPE:${file.name}`);
+  }
+  return persistUpload(buffer, ext, "task-steps");
 }
 
 function isValidTaskType(value: string | null): value is TaskType {
@@ -138,10 +137,10 @@ export async function POST(req: Request) {
         return NextResponse.json({ message: "Location (latitude/longitude) is required — please allow location access" }, { status: 400 });
       }
 
-      const sitePhotoUrl = await saveUploadedFile(sitePhoto, MAX_IMAGE_BYTES);
+      const sitePhotoUrl = await saveUploadedFile(sitePhoto, MAX_IMAGE_BYTES, ["image"]);
       let siteVideoUrl: string | null = null;
       if (siteVideo instanceof File && siteVideo.size > 0) {
-        siteVideoUrl = await saveUploadedFile(siteVideo, MAX_VIDEO_BYTES);
+        siteVideoUrl = await saveUploadedFile(siteVideo, MAX_VIDEO_BYTES, ["video"]);
       }
 
       await prisma.taskStep.upsert({
@@ -167,7 +166,7 @@ export async function POST(req: Request) {
         if (!(chart instanceof File) || chart.size === 0) {
           return NextResponse.json({ message: "Site chart/calculation file is required" }, { status: 400 });
         }
-        const chartUrl = await saveUploadedFile(chart, MAX_IMAGE_BYTES);
+        const chartUrl = await saveUploadedFile(chart, MAX_IMAGE_BYTES, ["image", "pdf"]);
 
         await prisma.taskStep.update({
           where: { taskType_taskId_cycle: { taskType, taskId, cycle } },
@@ -178,7 +177,7 @@ export async function POST(req: Request) {
         if (!(evidence instanceof File) || evidence.size === 0) {
           return NextResponse.json({ message: "Work-complete evidence file is required" }, { status: 400 });
         }
-        const evidenceUrl = await saveUploadedFile(evidence, MAX_VIDEO_BYTES);
+        const evidenceUrl = await saveUploadedFile(evidence, MAX_VIDEO_BYTES, ["image", "video"]);
 
         await prisma.taskStep.update({
           where: { taskType_taskId_cycle: { taskType, taskId, cycle } },
@@ -200,7 +199,7 @@ export async function POST(req: Request) {
 
       const billUrls: string[] = [];
       for (const bill of bills) {
-        billUrls.push(await saveUploadedFile(bill, MAX_IMAGE_BYTES));
+        billUrls.push(await saveUploadedFile(bill, MAX_IMAGE_BYTES, ["image", "pdf"]));
       }
 
       await prisma.taskStep.update({
@@ -218,6 +217,9 @@ export async function POST(req: Request) {
   } catch (error) {
     if (error instanceof Error && error.message.startsWith("FILE_TOO_LARGE")) {
       return NextResponse.json({ message: `File too large: ${error.message.split(":")[1]}` }, { status: 400 });
+    }
+    if (error instanceof Error && error.message.startsWith("UNSUPPORTED_FILE_TYPE")) {
+      return NextResponse.json({ message: `Unsupported file type: ${error.message.split(":")[1]}` }, { status: 400 });
     }
     console.error("Error saving task step:", error);
     return NextResponse.json({ message: "Internal server error" }, { status: 500 });

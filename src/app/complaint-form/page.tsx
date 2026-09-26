@@ -144,7 +144,7 @@ export default function ComplaintFormPage() {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 flex items-center justify-center">
-      <div className="max-w-md w-full bg-white p-8 rounded-xl shadow-lg">
+      <div className="max-w-2xl w-full bg-white p-8 rounded-xl shadow-lg">
         <div className="text-center mb-8">
           <h2 className="text-3xl font-extrabold text-gray-900">Register a Complaint</h2>
           <p className="mt-2 text-sm text-gray-600">HICON Insta & Serv - Service Request</p>
@@ -172,7 +172,7 @@ export default function ComplaintFormPage() {
           </div>
         )}
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-6">
           <div>
             <label className="block text-sm font-medium text-gray-700">
               Job No <span className="text-gray-400 font-normal">(either Job No or Door Serial No is required)</span>
@@ -256,7 +256,7 @@ export default function ComplaintFormPage() {
             />
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700">
               Email <span className="text-gray-400 font-normal">(Optional)</span>
             </label>
@@ -268,7 +268,7 @@ export default function ComplaintFormPage() {
             />
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700">Site Address</label>
             <textarea
               rows={2}
@@ -278,7 +278,7 @@ export default function ComplaintFormPage() {
             />
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700 mb-1">
               Site Location <span className="text-gray-400 font-normal">(Optional — tap on the map to mark the exact spot)</span>
             </label>
@@ -310,7 +310,7 @@ export default function ComplaintFormPage() {
             />
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700">Issue Description</label>
             <textarea
               required
@@ -351,7 +351,7 @@ export default function ComplaintFormPage() {
             {videos.length > 0 && <p className="mt-1 text-xs text-gray-500">{videos.length} video(s) selected</p>}
           </div>
 
-          <div>
+          <div className="sm:col-span-2">
             <label className="block text-sm font-medium text-gray-700">
               Upload Invoice / Bill <span className="text-gray-400 font-normal">(Optional)</span>
             </label>
@@ -367,7 +367,7 @@ export default function ComplaintFormPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
+            className="sm:col-span-2 w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50"
           >
             {loading ? "Submitting..." : "Submit Complaint"}
           </button>

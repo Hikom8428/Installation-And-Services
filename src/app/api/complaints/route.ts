@@ -3,9 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/lib/auth";
 import { getAssignedTaskIds, attachAssignments, attachStepSummary, getCompletedCycles } from "@/lib/taskAssignments";
-import { randomUUID } from "crypto";
-import { mkdir, writeFile } from "fs/promises";
-import path from "path";
+import { detectSafeExtension, persistUpload } from "@/lib/fileUpload";
 
 const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024; // 5MB
 const MAX_PHOTO_BYTES = 8 * 1024 * 1024; // 8MB
@@ -14,18 +12,6 @@ const MAX_PHOTOS = 10;
 const MAX_VIDEOS = 2;
 const VALID_WARRANTY_STATUS = ["IN_WARRANTY", "OUT_OF_WARRANTY"];
 const VALID_BRAND = ["HIKOM", "HICON"];
-
-async function saveUpload(file: File): Promise<string> {
-  const uploadDir = path.join(process.cwd(), "public", "uploads", "complaints");
-  await mkdir(uploadDir, { recursive: true });
-
-  const ext = path.extname(file.name) || "";
-  const filename = `${randomUUID()}${ext}`;
-  const buffer = Buffer.from(await file.arrayBuffer());
-  await writeFile(path.join(uploadDir, filename), buffer);
-
-  return `/uploads/complaints/${filename}`;
-}
 
 // Create a new complaint (Open for public or staff) — accepts multipart/form-data
 // for the optional invoice/bill attachment and the problem photos/videos.
@@ -67,14 +53,6 @@ export async function POST(req: Request) {
       return NextResponse.json({ message: "Site Attendant Name and Mobile No are required" }, { status: 400 });
     }
 
-    let attachmentUrl: string | null = null;
-    if (attachment instanceof File && attachment.size > 0) {
-      if (attachment.size > MAX_ATTACHMENT_BYTES) {
-        return NextResponse.json({ message: "Invoice/Bill attachment must be 5MB or smaller" }, { status: 400 });
-      }
-      attachmentUrl = await saveUpload(attachment);
-    }
-
     const photos = formData.getAll("photos").filter((f): f is File => f instanceof File && f.size > 0);
     const videos = formData.getAll("videos").filter((f): f is File => f instanceof File && f.size > 0);
 
@@ -90,6 +68,9 @@ export async function POST(req: Request) {
     if (videos.length > MAX_VIDEOS) {
       return NextResponse.json({ message: `You can upload at most ${MAX_VIDEOS} videos` }, { status: 400 });
     }
+    if (attachment instanceof File && attachment.size > 0 && attachment.size > MAX_ATTACHMENT_BYTES) {
+      return NextResponse.json({ message: "Invoice/Bill attachment must be 5MB or smaller" }, { status: 400 });
+    }
     for (const photo of photos) {
       if (photo.size > MAX_PHOTO_BYTES) {
         return NextResponse.json({ message: `Photo "${photo.name}" must be 8MB or smaller` }, { status: 400 });
@@ -101,9 +82,44 @@ export async function POST(req: Request) {
       }
     }
 
+    // Read + sniff every file's real content (magic bytes) up front, before writing
+    // anything to disk — the client-side `accept="image/*"` and the uploaded
+    // filename/extension are both attacker-controlled, so we never trust them.
+    // This also means a rejected submission never leaves orphaned files behind.
+    let attachmentFile: { buffer: Buffer; ext: string } | null = null;
+    if (attachment instanceof File && attachment.size > 0) {
+      const buffer = Buffer.from(await attachment.arrayBuffer());
+      const ext = detectSafeExtension(buffer, ["image", "pdf"]);
+      if (!ext) {
+        return NextResponse.json({ message: "Invoice/Bill attachment must be a valid PDF or image file" }, { status: 400 });
+      }
+      attachmentFile = { buffer, ext };
+    }
+
+    const photoFiles: { buffer: Buffer; ext: string }[] = [];
+    for (const photo of photos) {
+      const buffer = Buffer.from(await photo.arrayBuffer());
+      const ext = detectSafeExtension(buffer, ["image"]);
+      if (!ext) {
+        return NextResponse.json({ message: `"${photo.name}" is not a valid image file` }, { status: 400 });
+      }
+      photoFiles.push({ buffer, ext });
+    }
+
+    const videoFiles: { buffer: Buffer; ext: string }[] = [];
+    for (const video of videos) {
+      const buffer = Buffer.from(await video.arrayBuffer());
+      const ext = detectSafeExtension(buffer, ["video"]);
+      if (!ext) {
+        return NextResponse.json({ message: `"${video.name}" is not a valid video file` }, { status: 400 });
+      }
+      videoFiles.push({ buffer, ext });
+    }
+
+    const attachmentUrl = attachmentFile ? await persistUpload(attachmentFile.buffer, attachmentFile.ext, "complaints") : null;
     const mediaUrls: string[] = [];
-    for (const file of [...photos, ...videos]) {
-      mediaUrls.push(await saveUpload(file));
+    for (const { buffer, ext } of [...photoFiles, ...videoFiles]) {
+      mediaUrls.push(await persistUpload(buffer, ext, "complaints"));
     }
 
     const complaint = await prisma.complaint.create({
