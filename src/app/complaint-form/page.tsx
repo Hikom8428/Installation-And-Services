@@ -34,6 +34,20 @@ export default function ComplaintFormPage() {
   const [videos, setVideos] = useState<File[]>([]);
   const [status, setStatus] = useState<{ type: "success" | "error" | ""; message: string }>({ type: "", message: "" });
   const [loading, setLoading] = useState(false);
+  const [complaintNo, setComplaintNo] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopyComplaintNo = async () => {
+    if (complaintNo == null) return;
+    const text = `CMP-${String(complaintNo).padStart(4, "0")}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard API unavailable — the number is still shown on screen to note down manually
+    }
+  };
 
   const handlePhotosChange = (files: FileList | null) => {
     const list = Array.from(files || []);
@@ -56,6 +70,7 @@ export default function ComplaintFormPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setStatus({ type: "", message: "" });
+    setComplaintNo(null);
 
     const jobNo = formData.jobNoDigits ? `${JOB_NO_PREFIX}${formData.jobNoDigits}` : "";
     if (!jobNo && !formData.doorSerialNo.trim()) {
@@ -111,6 +126,7 @@ export default function ComplaintFormPage() {
 
       if (res.ok) {
         setStatus({ type: "success", message: "Aapki complaint safaltapurvak darj ho gayi hai. Hum jald hi aapse sampark karenge." });
+        setComplaintNo(data.complaint?.complaintNo ?? null);
         setFormData(emptyForm);
         setCoords(null);
         setAttachment(null);
@@ -137,6 +153,22 @@ export default function ComplaintFormPage() {
         {status.message && (
           <div className={`p-4 mb-6 rounded-md ${status.type === "success" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>
             {status.message}
+          </div>
+        )}
+
+        {complaintNo != null && (
+          <div className="mb-6 p-4 rounded-md border border-blue-200 bg-blue-50 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">Your Complaint No</p>
+              <p className="text-lg font-bold text-blue-900">CMP-{String(complaintNo).padStart(4, "0")}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCopyComplaintNo}
+              className="shrink-0 px-3 py-1.5 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
           </div>
         )}
 

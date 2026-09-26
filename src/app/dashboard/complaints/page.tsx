@@ -11,6 +11,7 @@ import BrandFilter, { Brand } from "@/components/BrandFilter";
 
 interface Complaint {
   id: string;
+  complaintNo: number;
   jobNo?: string | null;
   doorSerialNo?: string | null;
   customerName: string;
@@ -221,6 +222,7 @@ export default function ComplaintsDashboard() {
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
+              <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Complaint No</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Date</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Brand</th>
               <th className="px-6 py-3 text-left text-xs font-semibold text-slate-500 uppercase tracking-wider">Job / Door No</th>
@@ -239,13 +241,16 @@ export default function ComplaintsDashboard() {
           <tbody className="divide-y divide-slate-200 bg-white">
             {visibleComplaints.length === 0 ? (
               <tr>
-                <td colSpan={activeTab === "COMPLETED" ? 11 : 10} className="px-6 py-8 text-center text-slate-500">
+                <td colSpan={activeTab === "COMPLETED" ? 12 : 11} className="px-6 py-8 text-center text-slate-500">
                   {activeTab === "COMPLETED" ? "No completed complaints yet." : "No pending complaints found."}
                 </td>
               </tr>
             ) : (
               visibleComplaints.map((complaint) => (
                 <tr key={complaint.id} className="hover:bg-slate-50 transition-colors">
+                  <td className="px-6 py-4 whitespace-nowrap text-sm font-semibold text-slate-700">
+                    CMP-{String(complaint.complaintNo).padStart(4, "0")}
+                  </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     {new Date(complaint.createdAt).toLocaleDateString()}
                   </td>
@@ -323,6 +328,7 @@ export default function ComplaintsDashboard() {
               <div key={complaint.id} className="p-4 space-y-3">
                 <div className="flex items-start justify-between gap-2">
                   <div className="min-w-0">
+                    <div className="text-xs font-semibold text-slate-400">CMP-{String(complaint.complaintNo).padStart(4, "0")}</div>
                     <div className="text-sm font-semibold text-slate-900 truncate">{complaint.customerName}</div>
                     <div className="text-xs text-slate-500">{complaint.customerPhone}</div>
                     {complaint.customerEmail && <div className="text-xs text-slate-400 truncate">{complaint.customerEmail}</div>}

@@ -26,11 +26,26 @@ export default function SiteVisitFormPage() {
   const [coords, setCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [status, setStatus] = useState<{ type: "success" | "error" | ""; message: string }>({ type: "", message: "" });
   const [loading, setLoading] = useState(false);
+  const [serialNo, setSerialNo] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
+
+  const handleCopySerialNo = async () => {
+    if (serialNo == null) return;
+    const text = `SV-${String(serialNo).padStart(4, "0")}`;
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch {
+      // clipboard API unavailable — the number is still shown on screen to note down manually
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setStatus({ type: "", message: "" });
+    setSerialNo(null);
 
     try {
       const res = await fetch("/api/site-visits", {
@@ -46,13 +61,8 @@ export default function SiteVisitFormPage() {
       const data = await res.json();
 
       if (res.ok) {
-        const serialNo = data.siteVisit?.serialNo;
-        setStatus({
-          type: "success",
-          message: serialNo
-            ? `Site Visit request darj ho gaya hai (SV-${String(serialNo).padStart(4, "0")}). Hum jald hi aapse sampark karenge.`
-            : "Site Visit request darj ho gaya hai. Hum jald hi aapse sampark karenge.",
-        });
+        setStatus({ type: "success", message: "Site Visit request darj ho gaya hai. Hum jald hi aapse sampark karenge." });
+        setSerialNo(data.siteVisit?.serialNo ?? null);
         setFormData(emptyForm);
         setCoords(null);
       } else {
@@ -76,6 +86,22 @@ export default function SiteVisitFormPage() {
         {status.message && (
           <div className={`p-4 mb-6 rounded-md ${status.type === "success" ? "bg-green-50 text-green-800" : "bg-red-50 text-red-800"}`}>
             {status.message}
+          </div>
+        )}
+
+        {serialNo != null && (
+          <div className="mb-6 p-4 rounded-md border border-blue-200 bg-blue-50 flex items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-medium text-blue-700 uppercase tracking-wide">Your Site Visit No</p>
+              <p className="text-lg font-bold text-blue-900">SV-{String(serialNo).padStart(4, "0")}</p>
+            </div>
+            <button
+              type="button"
+              onClick={handleCopySerialNo}
+              className="shrink-0 px-3 py-1.5 rounded-md text-sm font-medium bg-blue-600 text-white hover:bg-blue-700"
+            >
+              {copied ? "Copied!" : "Copy"}
+            </button>
           </div>
         )}
 

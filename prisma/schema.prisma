@@ -139,6 +139,7 @@ model SiteVisit {
 
 model Complaint {
   id                 String     @id @default(uuid())
+  complaintNo        Int        @unique @default(autoincrement()) // shown to the customer as CMP-0001 for future reference
   jobNo              String?    // at least one of jobNo / doorSerialNo is required
   doorSerialNo       String?
   warrantyStatus     String?    // IN_WARRANTY | OUT_OF_WARRANTY
