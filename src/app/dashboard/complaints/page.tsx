@@ -103,6 +103,73 @@ export default function ComplaintsDashboard() {
     }
   };
 
+  const renderBrandBadge = (complaint: Complaint) =>
+    complaint.brand ? (
+      <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${complaint.brand === "HIKOM" ? "bg-cyan-100 text-cyan-800" : "bg-fuchsia-100 text-fuchsia-800"}`}>
+        {complaint.brand === "HIKOM" ? "Hikom" : "Hicon"}
+      </span>
+    ) : null;
+
+  const renderWarrantyBadge = (complaint: Complaint) =>
+    complaint.warrantyStatus ? (
+      <span className={`px-2 py-0.5 text-[10px] font-semibold rounded-full ${complaint.warrantyStatus === "IN_WARRANTY" ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}`}>
+        {complaint.warrantyStatus === "IN_WARRANTY" ? "In Warranty" : "Out of Warranty"}
+      </span>
+    ) : null;
+
+  const renderMediaLinks = (complaint: Complaint) => {
+    if (!complaint.attachmentUrl && (!complaint.mediaUrls || complaint.mediaUrls.length === 0)) return null;
+    return (
+      <>
+        {complaint.attachmentUrl && (
+          <a href={complaint.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-xs">
+            Bill
+          </a>
+        )}
+        {complaint.mediaUrls?.map((url, i) => (
+          <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-xs">
+            Media {i + 1}
+          </a>
+        ))}
+      </>
+    );
+  };
+
+  const renderAssignedTo = (complaint: Complaint) =>
+    complaint.assignments.length > 0 ? complaint.assignments.map((a) => a.doerName).join(", ") : "Unassigned";
+
+  const renderActions = (complaint: Complaint) =>
+    activeTab === "COMPLETED" ? (
+      <>
+        {session?.user.role !== "DOER" && complaint.isReopenable && (
+          <button onClick={() => setAssignModal({ isOpen: true, complaintId: complaint.taskId || complaint.id })} className="text-indigo-600 hover:text-indigo-900">
+            Reassign Doer
+          </button>
+        )}
+        <button
+          onClick={() => setProgressModal({ isOpen: true, complaintId: complaint.taskId || complaint.id, cycle: complaint.cycle, roundLabel: complaint.roundLabel })}
+          className="text-blue-600 hover:text-blue-900"
+        >
+          View Progress
+        </button>
+        {isMaster && (
+          <button onClick={() => setDeleteTarget(complaint)} className="text-red-600 hover:text-red-900">Delete</button>
+        )}
+      </>
+    ) : session?.user.role !== "DOER" ? (
+      <>
+        <button onClick={() => setAssignModal({ isOpen: true, complaintId: complaint.id })} className="text-indigo-600 hover:text-indigo-900">Assign Doer</button>
+        {complaint.assignments.length > 0 && (
+          <button onClick={() => setProgressModal({ isOpen: true, complaintId: complaint.id })} className="text-blue-600 hover:text-blue-900">View Progress</button>
+        )}
+        {isMaster && (
+          <button onClick={() => setDeleteTarget(complaint)} className="text-red-600 hover:text-red-900">Delete</button>
+        )}
+      </>
+    ) : (
+      <button onClick={() => setProgressModal({ isOpen: true, complaintId: complaint.id })} className="text-green-600 hover:text-green-900">Update Progress</button>
+    );
+
   const handleDelete = async () => {
     if (!deleteTarget) return;
     setDeleting(true);
@@ -150,7 +217,7 @@ export default function ComplaintsDashboard() {
             completedCount={completedComplaints.length}
           />
         </div>
-        <div className="overflow-x-auto">
+        <div className="hidden sm:block overflow-x-auto">
         <table className="min-w-full divide-y divide-slate-200">
           <thead className="bg-slate-50">
             <tr>
@@ -183,22 +250,12 @@ export default function ComplaintsDashboard() {
                     {new Date(complaint.createdAt).toLocaleDateString()}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
-                    {complaint.brand ? (
-                      <span className={`px-2 py-0.5 text-xs font-semibold rounded-full ${complaint.brand === "HIKOM" ? "bg-cyan-100 text-cyan-800" : "bg-fuchsia-100 text-fuchsia-800"}`}>
-                        {complaint.brand === "HIKOM" ? "Hikom" : "Hicon"}
-                      </span>
-                    ) : (
-                      "-"
-                    )}
+                    {renderBrandBadge(complaint) || "-"}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                     <div>{complaint.jobNo || "-"}</div>
                     {complaint.doorSerialNo && <div className="text-xs text-slate-400">Door: {complaint.doorSerialNo}</div>}
-                    {complaint.warrantyStatus && (
-                      <span className={`inline-block mt-1 px-2 py-0.5 text-[10px] font-semibold rounded-full ${complaint.warrantyStatus === "IN_WARRANTY" ? "bg-green-100 text-green-800" : "bg-orange-100 text-orange-800"}`}>
-                        {complaint.warrantyStatus === "IN_WARRANTY" ? "In Warranty" : "Out of Warranty"}
-                      </span>
-                    )}
+                    {complaint.warrantyStatus && <div className="mt-1">{renderWarrantyBadge(complaint)}</div>}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <div className="text-sm font-medium text-slate-900">{complaint.customerName}</div>
@@ -228,19 +285,7 @@ export default function ComplaintsDashboard() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm">
                     <div className="flex flex-col gap-0.5">
-                      {complaint.attachmentUrl && (
-                        <a href={complaint.attachmentUrl} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-xs">
-                          Bill
-                        </a>
-                      )}
-                      {complaint.mediaUrls?.map((url, i) => (
-                        <a key={i} href={url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:text-blue-800 underline text-xs">
-                          Media {i + 1}
-                        </a>
-                      ))}
-                      {!complaint.attachmentUrl && (!complaint.mediaUrls || complaint.mediaUrls.length === 0) && (
-                        <span className="text-slate-400">-</span>
-                      )}
+                      {renderMediaLinks(complaint) || <span className="text-slate-400">-</span>}
                     </div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
@@ -249,7 +294,7 @@ export default function ComplaintsDashboard() {
                     </span>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                    {complaint.assignments.length > 0 ? complaint.assignments.map((a) => a.doerName).join(", ") : "Unassigned"}
+                    {renderAssignedTo(complaint)}
                   </td>
                   {activeTab === "COMPLETED" && (
                     <td className="px-6 py-4">
@@ -257,42 +302,95 @@ export default function ComplaintsDashboard() {
                     </td>
                   )}
                   <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    {activeTab === "COMPLETED" ? (
-                      <div className="flex items-center gap-3">
-                        {session?.user.role !== "DOER" && complaint.isReopenable && (
-                          <button onClick={() => setAssignModal({ isOpen: true, complaintId: complaint.taskId || complaint.id })} className="text-indigo-600 hover:text-indigo-900">
-                            Reassign Doer
-                          </button>
-                        )}
-                        <button
-                          onClick={() => setProgressModal({ isOpen: true, complaintId: complaint.taskId || complaint.id, cycle: complaint.cycle, roundLabel: complaint.roundLabel })}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          View Progress
-                        </button>
-                        {isMaster && (
-                          <button onClick={() => setDeleteTarget(complaint)} className="text-red-600 hover:text-red-900">Delete</button>
-                        )}
-                      </div>
-                    ) : session?.user.role !== "DOER" ? (
-                      <div className="flex items-center gap-3">
-                        <button onClick={() => setAssignModal({ isOpen: true, complaintId: complaint.id })} className="text-indigo-600 hover:text-indigo-900">Assign Doer</button>
-                        {complaint.assignments.length > 0 && (
-                          <button onClick={() => setProgressModal({ isOpen: true, complaintId: complaint.id })} className="text-blue-600 hover:text-blue-900">View Progress</button>
-                        )}
-                        {isMaster && (
-                          <button onClick={() => setDeleteTarget(complaint)} className="text-red-600 hover:text-red-900">Delete</button>
-                        )}
-                      </div>
-                    ) : (
-                       <button onClick={() => setProgressModal({ isOpen: true, complaintId: complaint.id })} className="text-green-600 hover:text-green-900">Update Progress</button>
-                    )}
+                    <div className="flex items-center gap-3">{renderActions(complaint)}</div>
                   </td>
                 </tr>
               ))
             )}
           </tbody>
         </table>
+        </div>
+
+        {/* Mobile card list — the table above turns into a full row-per-column horizontal scroll
+            on narrow screens, so below `sm` each complaint renders as one self-contained card instead. */}
+        <div className="sm:hidden divide-y divide-slate-200">
+          {visibleComplaints.length === 0 ? (
+            <div className="px-4 py-8 text-center text-sm text-slate-500">
+              {activeTab === "COMPLETED" ? "No completed complaints yet." : "No pending complaints found."}
+            </div>
+          ) : (
+            visibleComplaints.map((complaint) => (
+              <div key={complaint.id} className="p-4 space-y-3">
+                <div className="flex items-start justify-between gap-2">
+                  <div className="min-w-0">
+                    <div className="text-sm font-semibold text-slate-900 truncate">{complaint.customerName}</div>
+                    <div className="text-xs text-slate-500">{complaint.customerPhone}</div>
+                    {complaint.customerEmail && <div className="text-xs text-slate-400 truncate">{complaint.customerEmail}</div>}
+                  </div>
+                  <span className={`shrink-0 px-2.5 py-1 text-xs font-semibold rounded-full ${getStatusColor(complaint.status)}`}>
+                    {complaint.status}
+                  </span>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-1.5">
+                  {renderBrandBadge(complaint)}
+                  {complaint.jobNo && (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">{complaint.jobNo}</span>
+                  )}
+                  {complaint.doorSerialNo && (
+                    <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-600">Door: {complaint.doorSerialNo}</span>
+                  )}
+                  {renderWarrantyBadge(complaint)}
+                  <span className="px-2 py-0.5 text-xs font-medium rounded-full bg-slate-100 text-slate-500">
+                    {new Date(complaint.createdAt).toLocaleDateString()}
+                  </span>
+                </div>
+
+                <div>
+                  <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Issue</div>
+                  <ExpandableText text={complaint.issueDescription} className="text-sm text-slate-600" />
+                </div>
+
+                {(complaint.siteAddress || complaint.siteLatitude != null || complaint.attendantName) && (
+                  <div>
+                    <div className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mb-0.5">Site</div>
+                    <ExpandableText text={complaint.siteAddress} className="text-sm text-slate-600" />
+                    {complaint.siteLatitude != null && complaint.siteLongitude != null && (
+                      <a
+                        href={`https://www.google.com/maps?q=${complaint.siteLatitude},${complaint.siteLongitude}`}
+                        target="_blank" rel="noopener noreferrer"
+                        className="text-blue-600 hover:underline text-xs block mt-0.5"
+                      >
+                        View on map
+                      </a>
+                    )}
+                    {complaint.attendantName && (
+                      <div className="text-xs text-slate-400 mt-0.5">
+                        {complaint.attendantName}{complaint.attendantPhone ? ` · ${complaint.attendantPhone}` : ""}
+                      </div>
+                    )}
+                  </div>
+                )}
+
+                {renderMediaLinks(complaint) && (
+                  <div className="flex flex-wrap gap-3">{renderMediaLinks(complaint)}</div>
+                )}
+
+                <div className="text-sm text-slate-600">
+                  <span className="text-[10px] font-semibold text-slate-400 uppercase tracking-wide mr-1">Assigned:</span>
+                  {renderAssignedTo(complaint)}
+                </div>
+
+                {activeTab === "COMPLETED" && (
+                  <CompletedTaskSummary assignments={complaint.assignments} stepSummary={complaint.stepSummary} showExpense roundLabel={complaint.roundLabel} />
+                )}
+
+                <div className="flex flex-wrap items-center gap-4 pt-2 border-t border-slate-100 text-sm font-medium">
+                  {renderActions(complaint)}
+                </div>
+              </div>
+            ))
+          )}
         </div>
       </div>
 
